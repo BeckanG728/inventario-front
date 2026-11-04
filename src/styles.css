@@ -1,1 +1,8 @@
-/* You can add global styles to this file, and also import other style files */
+/* src/styles.css */
+/* Arquitectura de estilos CSS globales — Neutral UI System */
+
+@import './styles/fonts.css';
+@import './styles/tokens.css';
+@import './styles/tokens-extension.css';
+@import './styles/base.css';
+@import './styles/primitives.css';

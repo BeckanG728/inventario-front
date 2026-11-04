@@ -1,0 +1,219 @@
+// src/app/features/reportes/valor-inventario/valor-inventario-page.ts
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+  signal
+} from '@angular/core';
+import { ReportesApi } from '@core/api/reportes/reportes-api';
+import { ValorInventarioResponse } from '@core/api/reportes/reportes.models';
+import { parseApiError } from '@core/api/api-error';
+import { PageHeader } from '@shared/ui/page-header/page-header';
+import { PillNav } from '@shared/ui/pill-nav/pill-nav';
+import { Button } from '@shared/ui/button/button';
+import { CurrencyPipe } from '@shared/format/currency.pipe';
+import { NumberPipe } from '@shared/format/number.pipe';
+import { REPORTES_NAV_ITEMS } from '../reportes-nav';
+
+@Component({
+  selector: 'app-valor-inventario-page',
+  standalone: true,
+  imports: [
+    PageHeader,
+    PillNav,
+    Button,
+    CurrencyPipe,
+    NumberPipe
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <app-page-header
+      title="Valor Estimado del Inventario"
+      subtitle="Cálculo valorizado del stock activo multiplicando existencias por el último costo unitario de compra"
+    >
+      <app-button
+        variant="outline"
+        [loading]="cargando()"
+        (btnClick)="cargar()"
+        aria-label="Actualizar cálculo de valor"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" aria-hidden="true">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Actualizar
+      </app-button>
+    </app-page-header>
+
+    <app-pill-nav [items]="navItems" ariaLabel="Reportes del sistema" />
+
+    <!-- Error -->
+    @if (errorMensaje()) {
+      <div class="inline-alert inline-alert--error alert-box" role="alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="8"/>
+          <line x1="12" y1="12" x2="12" y2="16"/>
+        </svg>
+        <span>{{ errorMensaje() }}</span>
+      </div>
+    }
+
+    @if (data(); as d) {
+      <!-- Tarjetas de resumen -->
+      <div class="stat-grid summary-grid">
+        <div class="stat-card stat-card--green">
+          <span class="label">Valor Total del Inventario</span>
+          <span class="value">{{ d.totalGeneral | appCurrency }}</span>
+          <span class="meta">Estimación sobre costos registrados</span>
+        </div>
+
+        <div class="stat-card-mini stat-card-mini--blue">
+          <span class="label">Productos con Costo</span>
+          <span class="value">{{ d.totalProductosConCosto | appNumber }}</span>
+        </div>
+
+        <div class="stat-card-mini stat-card-mini--orange">
+          <span class="label">Productos sin Costo</span>
+          <span class="value">{{ d.productosSinCosto | appNumber }}</span>
+        </div>
+      </div>
+
+      @if (d.productosSinCosto > 0) {
+        <div class="inline-alert inline-alert--info alert-box" role="status">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <span>
+            Existen <strong>{{ d.productosSinCosto }}</strong> productos sin compras previas (costo no registrado).
+            Estos se valorizan en S/ 0,00 hasta que se registre una entrada de inventario.
+          </span>
+        </div>
+      }
+
+      <!-- Tabla de detalle por producto -->
+      <div class="data-panel">
+        <div class="panel-head">
+          <h2>Detalle valorizado por repuesto ({{ d.detalle.length }} productos)</h2>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table" aria-label="Valorización de productos">
+            <thead>
+              <tr>
+                <th scope="col">Código</th>
+                <th scope="col">Nombre del Producto</th>
+                <th scope="col" class="text-right">Stock Actual</th>
+                <th scope="col" class="text-right">Último Costo Unitario</th>
+                <th scope="col" class="text-right">Valor Total Estimado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of d.detalle; track item.codigo) {
+                <tr>
+                  <td class="font-mono text-muted">{{ item.codigo }}</td>
+                  <td class="font-weight-500">{{ item.nombre }}</td>
+                  <td class="text-right font-weight-bold">{{ item.stockActual }}</td>
+                  <td class="text-right font-mono">
+                    @if (item.costoUltimaCompra !== null) {
+                      {{ item.costoUltimaCompra | appCurrency }}
+                    } @else {
+                      <span class="text-muted">Sin costo</span>
+                    }
+                  </td>
+                  <td class="text-right font-mono font-weight-bold" [class.text-muted]="item.valorEstimadoProducto === 0">
+                    {{ item.valorEstimadoProducto | appCurrency }}
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="text-center text-muted empty-cell">
+                    No hay productos activos en inventario.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  `,
+  styles: [`
+    .summary-grid {
+      margin-bottom: var(--space-5);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-body);
+    }
+
+    .data-table th, .data-table td {
+      padding: var(--space-3) var(--space-4);
+      text-align: left;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .data-table th {
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--color-surface-raised);
+    }
+
+    .data-table tbody tr:hover {
+      background: var(--color-surface-raised);
+    }
+
+    .empty-cell {
+      padding: var(--space-8) var(--space-4);
+    }
+
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .font-mono { font-family: var(--font-mono); }
+    .font-weight-500 { font-weight: 500; }
+    .font-weight-bold { font-weight: 700; }
+    .text-muted { color: var(--color-text-muted); }
+
+    .alert-box {
+      margin-bottom: var(--space-5);
+    }
+  `]
+})
+export class ValorInventarioPage implements OnInit {
+  private readonly reportesApi = inject(ReportesApi);
+
+  readonly navItems = REPORTES_NAV_ITEMS;
+
+  readonly data = signal<ValorInventarioResponse | null>(null);
+  readonly cargando = signal(false);
+  readonly errorMensaje = signal('');
+
+  ngOnInit(): void {
+    this.cargar();
+  }
+
+  cargar(): void {
+    this.cargando.set(true);
+    this.errorMensaje.set('');
+
+    this.reportesApi.getValorInventario().subscribe({
+      next: res => {
+        this.data.set(res);
+        this.cargando.set(false);
+      },
+      error: err => {
+        this.errorMensaje.set(parseApiError(err).message);
+        this.cargando.set(false);
+      }
+    });
+  }
+}

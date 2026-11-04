@@ -1,0 +1,45 @@
+/* src/styles/tokens-extension.css */
+/* Tokens de extensión (E-10): variantes hover, contraste de texto para etiquetas y utilidades */
+
+:root {
+  /* Variantes de hover para componentes interactivos */
+  --color-blue-hover: #1D4ED8;
+  --color-green-hover: #15803D;
+  --color-teal-hover: #0E7490;
+  --color-purple-hover: #6D28D9;
+  --color-red-hover: #B91C1C;
+  --color-orange-hover: #C2410C;
+
+  /* Variantes de alto contraste para texto sobre tint/blanco (G-04) */
+  --color-blue-text: #1D4ED8;
+  --color-green-text: #15803D;
+  --color-teal-text: #0E7490;
+  --color-purple-text: #6D28D9;
+  --color-red-text: #B91C1C;
+  --color-orange-text: #C2410C;
+
+  /* Superficies y estados de foco adicionales en tema claro */
+  --color-surface-hover: #F1F5F9;
+  --color-focus-ring: var(--color-primary);
+
+  /* Alturas táctiles mínimas para móvil (mínimo 44px) */
+  --touch-target-min: 44px;
+}
+
+[data-theme="dark"] {
+  --color-blue-hover: #3B82F6;
+  --color-green-hover: #22C55E;
+  --color-teal-hover: #06B6D4;
+  --color-purple-hover: #8B5CF6;
+  --color-red-hover: #EF4444;
+  --color-orange-hover: #F97316;
+
+  --color-blue-text: #60A5FA;
+  --color-green-text: #4ADE80;
+  --color-teal-text: #22D3EE;
+  --color-purple-text: #A78BFA;
+  --color-red-text: #F87171;
+  --color-orange-text: #FB923C;
+
+  --color-surface-hover: #334155;
+}
