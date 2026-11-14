@@ -114,7 +114,7 @@ import { NumberPipe } from '@shared/format/number.pipe';
             <span class="label">Valor Estimado</span>
             <span class="value">{{ d.kpis.valorEstimadoInventario | appCurrency }}</span>
           </div>
-          <div class="stat-card-mini">
+          <div class="stat-card-mini stat-card-mini--neutral">
             <span class="label">Sin Costo Registrado</span>
             <span class="value">{{ d.kpis.productosSinCosto }} prod.</span>
           </div>
@@ -157,6 +157,13 @@ import { NumberPipe } from '@shared/format/number.pipe';
           } @else {
             <div class="table-wrapper">
               <table class="data-table" aria-label="Alertas más urgentes">
+                <colgroup>
+                  <col style="width: 15%">
+                  <col style="width: 37%">
+                  <col style="width: 13%">
+                  <col style="width: 14%">
+                  <col style="width: 21%">
+                </colgroup>
                 <thead>
                   <tr>
                     <th scope="col">Código</th>
@@ -212,6 +219,13 @@ import { NumberPipe } from '@shared/format/number.pipe';
           } @else {
             <div class="table-wrapper">
               <table class="data-table" aria-label="Últimos movimientos registrados">
+                <colgroup>
+                  <col style="width: 17%">
+                  <col style="width: 10%">
+                  <col style="width: 36%">
+                  <col style="width: 13%">
+                  <col style="width: 24%">
+                </colgroup>
                 <thead>
                   <tr>
                     <th scope="col">Fecha / Hora</th>
@@ -296,12 +310,17 @@ import { NumberPipe } from '@shared/format/number.pipe';
       display: grid;
       grid-template-columns: 1fr;
       gap: var(--space-5);
+      min-width: 0;
     }
 
     @media (min-width: 1024px) {
       .dashboard-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
       }
+    }
+
+    .dashboard-grid > * {
+      min-width: 0;
     }
 
     .panel-head {
@@ -330,9 +349,15 @@ import { NumberPipe } from '@shared/format/number.pipe';
       text-decoration: underline;
     }
 
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
     .data-table {
       width: 100%;
       border-collapse: collapse;
+      table-layout: fixed;
       font-size: var(--font-size-body);
     }
 

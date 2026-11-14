@@ -10,11 +10,19 @@ import { PageHeader } from '@shared/ui/page-header/page-header';
 import { PillNav, PillNavItem } from '@shared/ui/pill-nav/pill-nav';
 import { Field } from '@shared/ui/field/field';
 import { Button } from '@shared/ui/button/button';
+import { Badge } from '@shared/ui/badge/badge';
 
 @Component({
   selector: 'app-categoria-form-page',
   standalone: true,
-  imports: [ReactiveFormsModule, PageHeader, PillNav, Field, Button],
+  imports: [
+    ReactiveFormsModule,
+    PageHeader,
+    PillNav,
+    Field,
+    Button,
+    Badge
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header
@@ -68,10 +76,10 @@ import { Button } from '@shared/ui/button/button';
         </form>
       </div>
 
-      <!-- Categorías conocidas en la sesión -->
+      <!-- Tabla de categorías conocidas en la sesión -->
       <div class="data-panel list-card">
         <div class="panel-head">
-          <h3>Categorías activas</h3>
+          <h3>Categorías registradas</h3>
           <span class="panel-meta font-mono">{{ catalogoLookup.categorias().length }} registradas</span>
         </div>
 
@@ -82,13 +90,32 @@ import { Button } from '@shared/ui/button/button';
             </p>
           </div>
         } @else {
-          <div class="category-list">
-            @for (cat of catalogoLookup.categorias(); track cat.id) {
-              <div class="data-row">
-                <span class="label">{{ cat.nombre }}</span>
-                <span class="value font-mono">ID: {{ cat.id }}</span>
-              </div>
-            }
+          <div class="table-wrapper">
+            <table class="data-table" aria-label="Categorías registradas">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th class="text-right">ID</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (cat of catalogoLookup.categorias(); track cat.id) {
+                  <tr [class.row-inactive]="!cat.activo">
+                    <td>{{ cat.nombre }}</td>
+                    <td class="text-right font-mono">{{ cat.id }}</td>
+                    <td>
+                      <app-badge
+                        [variant]="cat.activo ? 'neutral' : 'danger'"
+                        size="sm"
+                      >
+                        {{ cat.activo ? 'Activo' : 'Inactivo' }}
+                      </app-badge>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
         }
       </div>
@@ -129,9 +156,56 @@ import { Button } from '@shared/ui/button/button';
       height: fit-content;
     }
 
-    .category-list {
-      display: flex;
-      flex-direction: column;
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: var(--font-size-body);
+    }
+
+    .data-table th, .data-table td {
+      padding: var(--space-3) var(--space-4);
+      text-align: left;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .data-table th {
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--color-surface-raised);
+    }
+
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .data-table tbody tr:hover {
+      background: var(--color-surface-raised);
+    }
+
+    .row-inactive {
+      opacity: 0.6;
+    }
+
+    .text-right { text-align: right; }
+
+    .font-mono { font-family: var(--font-family-mono); }
+
+    .empty-state {
+      padding: var(--space-8);
+      text-align: center;
+    }
+
+    .empty-state__description {
+      color: var(--color-text-secondary);
     }
   `]
 })

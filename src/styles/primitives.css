@@ -56,6 +56,7 @@
 .stat-card-mini--purple { background-color: var(--color-purple-tint); color: var(--color-purple-text); border-color: rgba(124, 58, 237, 0.25); }
 .stat-card-mini--red    { background-color: var(--color-red-tint);    color: var(--color-red-text); border-color: rgba(220, 38, 38, 0.25); }
 .stat-card-mini--orange { background-color: var(--color-orange-tint); color: var(--color-orange-text); border-color: rgba(234, 88, 12, 0.25); }
+.stat-card-mini--neutral { background-color: var(--color-surface-raised); color: var(--color-text-primary); border-color: var(--color-border-soft); }
 
 .stat-card-mini .value {
   font-size: 1.25rem;

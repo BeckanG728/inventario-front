@@ -1,6 +1,8 @@
 // src/app/features/operaciones/entrada/entrada-form-page.ts
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ProductosApi } from '@core/api/productos/productos-api';
 import { ProductoResponse } from '@core/api/productos/productos.models';
 import { OperacionesApi } from '@core/api/operaciones/operaciones-api';
@@ -61,6 +63,20 @@ import { Button } from '@shared/ui/button/button';
         </div>
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+          <!-- Producto fijado desde la tabla (acción "Actualizar stock") -->
+          @if (productoFijoId() !== null) {
+            <div class="fixed-field">
+              <span class="fixed-field__label">Repuesto / Producto <span class="fixed-field__req">*</span></span>
+              @if (selectedProducto(); as pf) {
+                <div class="fixed-field__box">
+                  <span><strong>{{ pf.codigo }}</strong> — {{ pf.nombre }}</span>
+                  <button type="button" class="link-btn" (click)="liberarProducto()">Elegir otro producto</button>
+                </div>
+              } @else {
+                <div class="fixed-field__box">Cargando producto…</div>
+              }
+            </div>
+          } @else {
           <!-- Selector de producto -->
           <app-field
             label="Repuesto / Producto"
@@ -78,6 +94,7 @@ import { Button } from '@shared/ui/button/button';
               }
             </select>
           </app-field>
+          }
 
           <!-- Info rápida del producto seleccionado -->
           @if (selectedProducto(); as p) {
@@ -100,15 +117,14 @@ import { Button } from '@shared/ui/button/button';
             label="Proveedor distribuidor"
             forId="proveedorId"
             [required]="true"
-            hint="Empresa o contacto que emite la factura o guía de remisión"
+            hint="Proveedor asociado al producto seleccionado (no editable)"
             [error]="proveedorError()"
           >
             <select id="proveedorId" formControlName="proveedorId">
-              <option [value]="0">-- Selecciona un proveedor --</option>
-              @for (prov of proveedores(); track prov.id) {
-                <option [value]="prov.id">
-                  {{ prov.ruc }} — {{ prov.razonSocial }}
-                </option>
+              @if (proveedorDelProducto(); as prv) {
+                <option [value]="prv.id">{{ prv.ruc ? prv.ruc + ' — ' : '' }}{{ prv.razonSocial }}</option>
+              } @else {
+                <option [value]="0">-- Selecciona primero un producto --</option>
               }
             </select>
           </app-field>
@@ -229,6 +245,47 @@ import { Button } from '@shared/ui/button/button';
       color: var(--color-text-secondary);
     }
 
+    /* Producto fijado desde la tabla */
+    .fixed-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+    }
+
+    .fixed-field__label {
+      font-size: var(--text-sm);
+      font-weight: 500;
+    }
+
+    .fixed-field__req {
+      color: var(--color-danger);
+    }
+
+    .fixed-field__box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+      padding: var(--space-3) var(--space-4);
+      background-color: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+    }
+
+    .link-btn {
+      padding: 0;
+      border: none;
+      background: none;
+      font: inherit;
+      font-size: var(--text-xs);
+      color: var(--color-primary);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
     .total-bar {
       display: flex;
       align-items: center;
@@ -259,6 +316,9 @@ export class EntradaFormPage implements OnInit {
   private readonly operacionesApi = inject(OperacionesApi);
   private readonly catalogoLookup = inject(CatalogoLookup);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly navItems: PillNavItem[] = [
     { label: 'Registrar consumo', route: '/operaciones/consumo' },
@@ -269,6 +329,23 @@ export class EntradaFormPage implements OnInit {
   readonly productos = signal<ProductoResponse[]>([]);
   readonly selectedProducto = signal<ProductoResponse | null>(null);
   readonly proveedores = this.catalogoLookup.proveedores;
+
+  /** Id del producto fijado desde la tabla (?productoId=). null = selección libre. */
+  readonly productoFijoId = signal<number | null>(null);
+
+  /** El proveedor siempre es el asociado al producto seleccionado. */
+  readonly proveedorDelProducto = computed(() => {
+    const p = this.selectedProducto();
+    if (!p) return null;
+    const id = p.proveedorId ?? p.idProveedor;
+    if (!id) return null;
+    const enLookup = this.proveedores().find(x => x.id === id);
+    return {
+      id,
+      razonSocial: p.proveedorRazonSocial || enLookup?.razonSocial || `Proveedor #${id}`,
+      ruc: enLookup?.ruc || ''
+    };
+  });
 
   readonly submitting = signal<boolean>(false);
   readonly errorAlert = signal<string | null>(null);
@@ -290,13 +367,40 @@ export class EntradaFormPage implements OnInit {
   });
 
   ngOnInit(): void {
+    // El proveedor no se elige: se deriva del producto seleccionado.
+    this.form.controls.proveedorId.disable();
+
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(qp => {
+      const id = Number(qp.get('productoId'));
+      if (id > 0) {
+        this.fijarProducto(id);
+      } else if (this.productoFijoId() !== null) {
+        this.limpiarSeleccion();
+      }
+    });
+
     this.cargarProductos();
   }
 
   cargarProductos(): void {
     this.productosApi.listar({ page: 0, size: 100 }).subscribe({
       next: (resp) => {
-        this.productos.set(resp.content.filter(p => p.activo));
+        const activos = resp.content.filter(p => p.activo);
+        this.productos.set(activos);
+
+        // Producto fijado desde la tabla: refrescar con datos actuales o aplicarlo si aún no se pudo.
+        const fijoId = this.productoFijoId();
+        if (fijoId !== null) {
+          const fresco = activos.find(p => p.id === fijoId);
+          if (fresco && this.selectedProducto()) {
+            this.selectedProducto.set(fresco);
+          } else if (fresco) {
+            this.aplicarProducto(fresco);
+          } else if (!this.selectedProducto()) {
+            // No está disponible (inactivo o fuera del listado): volver a selección libre.
+            this.productoFijoId.set(null);
+          }
+        }
       }
     });
   }
@@ -304,11 +408,45 @@ export class EntradaFormPage implements OnInit {
   onProductoChange(): void {
     const id = Number(this.form.controls.productoId.value);
     const prod = this.productos().find(p => p.id === id) || null;
-    this.selectedProducto.set(prod);
+    if (prod) {
+      this.aplicarProducto(prod);
+    } else {
+      this.limpiarSeleccion();
+    }
+  }
 
-    if (prod && prod.costoUltimaCompra && prod.costoUltimaCompra > 0) {
+  /** Fija el producto recibido por query param (y por navigation state desde la tabla). */
+  private fijarProducto(id: number): void {
+    this.productoFijoId.set(id);
+    const desdeTabla = history.state?.producto as ProductoResponse | undefined;
+    const prod = desdeTabla?.id === id ? desdeTabla : this.productos().find(p => p.id === id);
+    if (prod) {
+      this.aplicarProducto(prod);
+    }
+  }
+
+  /** Selecciona el producto, fija su proveedor y precarga el último costo. */
+  private aplicarProducto(prod: ProductoResponse): void {
+    this.selectedProducto.set(prod);
+    this.form.controls.productoId.setValue(prod.id);
+    this.form.controls.proveedorId.setValue(prod.proveedorId ?? prod.idProveedor ?? 0);
+
+    if (prod.costoUltimaCompra && prod.costoUltimaCompra > 0) {
       this.form.controls.costoUnitario.setValue(prod.costoUltimaCompra);
     }
+  }
+
+  private limpiarSeleccion(): void {
+    this.productoFijoId.set(null);
+    this.selectedProducto.set(null);
+    this.form.controls.productoId.setValue(0);
+    this.form.controls.proveedorId.setValue(0);
+  }
+
+  /** Desde el producto fijado: volver al selector libre quitando el query param. */
+  liberarProducto(): void {
+    this.limpiarSeleccion();
+    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true, state: {} });
   }
 
   onSubmit(): void {
@@ -322,6 +460,11 @@ export class EntradaFormPage implements OnInit {
     this.lastSuccess.set(null);
 
     const raw = this.form.getRawValue();
+    if (Number(raw.proveedorId) < 1) {
+      this.submitting.set(false);
+      this.errorAlert.set('El producto seleccionado no tiene un proveedor asociado.');
+      return;
+    }
     const req: EntradaRequest = {
       productoId: Number(raw.productoId),
       proveedorId: Number(raw.proveedorId),
@@ -334,13 +477,24 @@ export class EntradaFormPage implements OnInit {
         this.submitting.set(false);
         this.lastSuccess.set(resp);
         this.toast.success(`Entrada registrada. Nuevo stock: ${resp.movimiento.stockPosterior}`);
-        this.form.reset({
-          productoId: 0,
-          proveedorId: 0,
-          cantidad: 1,
-          costoUnitario: 0
-        });
-        this.selectedProducto.set(null);
+        const prodActual = this.selectedProducto();
+        if (this.productoFijoId() !== null && prodActual) {
+          // Flujo desde la tabla: se mantiene el producto y se refleja el nuevo stock/costo.
+          this.selectedProducto.set({
+            ...prodActual,
+            stockActual: resp.movimiento.stockPosterior,
+            costoUltimaCompra: req.costoUnitario
+          });
+          this.form.patchValue({ cantidad: 1 });
+        } else {
+          this.form.reset({
+            productoId: 0,
+            proveedorId: 0,
+            cantidad: 1,
+            costoUnitario: 0
+          });
+          this.selectedProducto.set(null);
+        }
         this.cargarProductos();
       },
       error: (err) => {

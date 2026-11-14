@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } 
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { LucideBan, LucideEye, LucidePackagePlus, LucidePencil } from '@lucide/angular';
 import { ProductosApi } from '@core/api/productos/productos-api';
 import { ProductoResponse } from '@core/api/productos/productos.models';
 import { CatalogoLookup } from '@core/lookup/catalogo-lookup';
@@ -18,6 +19,7 @@ import { Badge } from '@shared/ui/badge/badge';
 import { Pagination } from '@shared/ui/pagination/pagination';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog/confirm-dialog';
 import { ProductoFormDialog } from './producto-form-dialog';
+import { ProductoDetalleDialog } from './producto-detalle-dialog';
 import { StockMinimoDialog } from './stock-minimo-dialog';
 
 @Component({
@@ -34,7 +36,12 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
     Pagination,
     ConfirmDialog,
     ProductoFormDialog,
-    StockMinimoDialog
+    ProductoDetalleDialog,
+    StockMinimoDialog,
+    LucideEye,
+    LucidePencil,
+    LucidePackagePlus,
+    LucideBan
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -103,46 +110,40 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
 
     <!-- Tabla de resultados -->
     <div class="table-wrapper" [class.table-loading]="loading() && productos().length > 0">
-      <table>
+      <table class="productos-table">
         <thead>
           <tr>
             <th>Código SKU</th>
-            <th>Nombre y descripción</th>
+            <th>Producto</th>
             <th>Categoría</th>
-            <th class="text-right">Stock actual</th>
-            <th class="text-right">Stock mín.</th>
+            <th class="text-right">Stock</th>
+            <th>Estado del stock</th>
             <th>Estado</th>
             @if (isJefeTaller()) {
-              <th class="text-right">Última compra</th>
+              <th class="text-right">Último costo</th>
             }
-            <th>Disponibilidad</th>
-            @if (isJefeTaller()) {
-              <th class="text-right">Acciones</th>
-            }
+            <th class="action-cell">Acciones</th>
           </tr>
         </thead>
         <tbody>
           @if (loading() && productos().length === 0) {
             @for (s of [1, 2, 3, 4, 5]; track s) {
-              <tr>
-                <td><div class="skeleton" style="width: 80px; height: 16px;"></div></td>
+              <tr class="product-row">
+                <td><div class="skeleton" style="width: 90px; height: 16px;"></div></td>
                 <td><div class="skeleton" style="width: 180px; height: 16px;"></div></td>
                 <td><div class="skeleton" style="width: 100px; height: 16px;"></div></td>
                 <td class="text-right"><div class="skeleton" style="width: 40px; height: 16px; margin-left: auto;"></div></td>
-                <td class="text-right"><div class="skeleton" style="width: 40px; height: 16px; margin-left: auto;"></div></td>
                 <td><div class="skeleton" style="width: 70px; height: 20px;"></div></td>
-                @if (isJefeTaller()) {
-                  <td class="text-right"><div class="skeleton" style="width: 60px; height: 16px; margin-left: auto;"></div></td>
-                }
                 <td><div class="skeleton" style="width: 60px; height: 20px;"></div></td>
                 @if (isJefeTaller()) {
-                  <td class="text-right"><div class="skeleton" style="width: 90px; height: 28px; margin-left: auto;"></div></td>
+                  <td class="text-right"><div class="skeleton" style="width: 70px; height: 16px; margin-left: auto;"></div></td>
                 }
+                <td class="action-cell"><div class="skeleton" style="width: 36px; height: 36px; margin: 0 auto;"></div></td>
               </tr>
             }
           } @else if (productos().length === 0) {
             <tr>
-              <td [attr.colspan]="isJefeTaller() ? 9 : 7">
+              <td [attr.colspan]="isJefeTaller() ? 8 : 7">
                 <div class="empty-state">
                   <div class="empty-state__icon">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -164,37 +165,48 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
             </tr>
           } @else {
             @for (p of productos(); track p.id) {
-              <tr [class.row-inactive]="!p.activo">
-                <td class="font-mono">
+              <tr class="product-row" [class.row-inactive]="!p.activo">
+                <td class="cell-sku font-mono">
                   <strong>{{ p.codigo }}</strong>
                 </td>
+
                 <td>
-                  <div class="product-title">{{ p.nombre }}</div>
-                  @if (p.descripcion) {
-                    <div class="product-desc">{{ p.descripcion }}</div>
-                  }
-                  <div class="product-unit font-mono">Unidad: {{ p.unidadMedida }}</div>
+                  <div class="cell-product">
+                    <button
+                      type="button"
+                      class="name-link"
+                      [title]="p.nombre"
+                      [attr.aria-label]="'Ver detalle de ' + p.nombre"
+                      (click)="openDetalleDialog(p)"
+                    >
+                      {{ p.nombre }}
+                    </button>
+                  </div>
                 </td>
+
                 <td>
-                  {{ p.categoriaNombre || catalogoLookup.getNombreCategoria(p.categoriaId) }}
+                  <div
+                    class="cell-truncate cell-category"
+                    [title]="p.categoriaNombre || catalogoLookup.getNombreCategoria(p.categoriaId)"
+                  >
+                    {{ p.categoriaNombre || catalogoLookup.getNombreCategoria(p.categoriaId) }}
+                  </div>
                 </td>
-                <td class="text-right font-mono">
-                  <strong>{{ p.stockActual }}</strong>
+
+                <td class="text-right">
+                  <div class="stock-cell">
+                    <span class="stock-cell__actual font-mono">{{ p.stockActual }}</span>
+                    <span class="stock-cell__min font-mono">Mín. {{ p.stockMinimo }}</span>
+                  </div>
                 </td>
-                <td class="text-right font-mono">
-                  {{ p.stockMinimo }}
-                </td>
+
                 <td>
                   <app-stock-estado-badge
                     [stockActual]="p.stockActual"
                     [stockMinimo]="p.stockMinimo"
                   />
                 </td>
-                @if (isJefeTaller()) {
-                  <td class="text-right font-mono">
-                    {{ p.costoUltimaCompra | appCurrency }}
-                  </td>
-                }
+
                 <td>
                   @if (p.activo) {
                     <app-badge variant="neutral" size="sm">Activo</app-badge>
@@ -202,38 +214,60 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
                     <app-badge variant="danger" size="sm">Inactivo</app-badge>
                   }
                 </td>
+
                 @if (isJefeTaller()) {
-                  <td class="text-right action-cell">
+                  <td class="text-right font-mono cell-cost">
+                    {{ p.costoUltimaCompra | appCurrency }}
+                  </td>
+                }
+
+                <td class="action-cell">
+                  <div class="row-actions">
                     <button
                       type="button"
                       class="row-btn"
-                      title="Editar datos del producto"
-                      (click)="openEditDialog(p)"
+                      title="Ver detalle"
+                      [attr.aria-label]="'Ver detalle de ' + p.nombre"
+                      (click)="openDetalleDialog(p)"
                     >
-                      Editar
+                      <svg lucideEye [size]="17" aria-hidden="true"></svg>
                     </button>
 
-                    <button
-                      type="button"
-                      class="row-btn"
-                      title="Actualizar stock mínimo"
-                      (click)="openStockMinimoDialog(p)"
-                    >
-                      Stock mín.
-                    </button>
+                    @if (isJefeTaller()) {
+                      <button
+                        type="button"
+                        class="row-btn"
+                        title="Editar producto"
+                        [attr.aria-label]="'Editar ' + p.nombre"
+                        (click)="openEditDialog(p)"
+                      >
+                        <svg lucidePencil [size]="17" aria-hidden="true"></svg>
+                      </button>
 
-                    @if (p.activo) {
+                      <button
+                        type="button"
+                        class="row-btn row-btn--success"
+                        [title]="p.activo ? 'Actualizar stock (registrar entrada)' : 'No disponible: el producto está inactivo'"
+                        [attr.aria-label]="'Actualizar stock de ' + p.nombre"
+                        [disabled]="!p.activo"
+                        (click)="goActualizarStock(p)"
+                      >
+                        <svg lucidePackagePlus [size]="17" aria-hidden="true"></svg>
+                      </button>
+
                       <button
                         type="button"
                         class="row-btn row-btn--danger"
-                        title="Desactivar producto"
+                        [title]="p.activo ? 'Desactivar producto' : 'El producto ya está inactivo'"
+                        [attr.aria-label]="'Desactivar ' + p.nombre"
+                        [disabled]="!p.activo"
                         (click)="confirmDesactivar(p)"
                       >
-                        Desactivar
+                        <svg lucideBan [size]="17" aria-hidden="true"></svg>
                       </button>
                     }
-                  </td>
-                }
+                  </div>
+                </td>
               </tr>
             }
           }
@@ -251,6 +285,14 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
     />
 
     <!-- Diálogos modales -->
+    <app-producto-detalle-dialog
+      [(isOpen)]="isDetalleOpen"
+      [producto]="selectedProducto()"
+      [showCompras]="isJefeTaller()"
+      [canAdjustStockMinimo]="isJefeTaller()"
+      (stockMinimoClick)="onDetalleStockMinimo()"
+    />
+
     <app-producto-form-dialog
       [(isOpen)]="isFormOpen"
       [productoToEdit]="selectedProducto()"
@@ -328,55 +370,171 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
       transition: opacity var(--duration-fast) var(--easing-out);
     }
 
-    .product-title {
+    /* Tabla compacta: 8 columnas, filas de altura constante */
+    .productos-table {
+      min-width: 980px;
+    }
+
+    .productos-table th,
+    .productos-table td {
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+
+    .product-row {
+      height: 68px;
+    }
+
+    .product-row td {
+      padding-top: 8px;
+      padding-bottom: 8px;
+      vertical-align: middle;
+      font-size: 13.5px;
+    }
+
+    .row-inactive td:not(.action-cell) {
+      opacity: 0.65;
+    }
+
+    /* SKU: completo y en una sola línea */
+    .cell-sku {
+      white-space: nowrap;
+    }
+
+    /* Producto: nombre truncado + estado administrativo debajo */
+    .cell-product {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      max-width: 280px;
+      min-width: 0;
+    }
+
+    .name-link {
+      display: block;
+      max-width: 100%;
+      padding: 0;
+      border: none;
+      background: none;
+      font: inherit;
       font-weight: 600;
       color: var(--color-text-primary);
+      text-align: left;
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    .product-desc {
-      font-size: 12px;
-      color: var(--color-text-secondary);
-      margin-top: 2px;
+    .name-link:hover {
+      color: var(--color-blue-text);
+      text-decoration: underline;
     }
 
-    .product-unit {
-      font-size: 11px;
+    .name-link:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      border-radius: var(--radius-sm);
+    }
+
+    .cell-truncate {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cell-category {
+      max-width: 180px;
+    }
+
+    /* Stock: actual (principal) + mínimo (secundario) */
+    .stock-cell {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-end;
+      line-height: 1.25;
+    }
+
+    .stock-cell__actual {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stock-cell__min {
+      font-size: 11.5px;
       color: var(--color-text-muted);
-      margin-top: 2px;
+      font-variant-numeric: tabular-nums;
     }
 
-    .row-inactive {
-      opacity: 0.6;
+    .cell-cost {
+      white-space: nowrap;
     }
 
+    /* Acciones: 4 botones cuadrados de 36 px, separación de 8 px */
     .action-cell {
       white-space: nowrap;
+      width: 200px;
+      text-align: center;
+    }
+
+    .row-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
 
     .row-btn {
       display: inline-flex;
       align-items: center;
-      padding: 4px 8px;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      padding: 0;
       border: 1px solid var(--color-border);
       border-radius: var(--radius-sm);
       background-color: var(--color-surface);
       color: var(--color-text-primary);
-      font-size: 12px;
-      font-weight: 500;
       cursor: pointer;
-      margin-left: 4px;
-      transition: background-color var(--duration-fast) var(--easing-out);
+      transition: background-color var(--duration-fast) var(--easing-out),
+                  color var(--duration-fast) var(--easing-out);
     }
 
-    .row-btn:hover {
+    .row-btn svg {
+      display: block;
+    }
+
+    .row-btn:hover:not(:disabled) {
       background-color: var(--color-surface-hover);
+    }
+
+    .row-btn:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    .row-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .row-btn--success {
+      color: var(--color-success);
+    }
+
+    .row-btn--success:hover:not(:disabled) {
+      background-color: var(--color-success-tint);
     }
 
     .row-btn--danger {
       color: var(--color-danger);
     }
 
-    .row-btn--danger:hover {
+    .row-btn--danger:hover:not(:disabled) {
       background-color: var(--color-danger-tint);
     }
   `]
@@ -409,6 +567,7 @@ export class ProductosPage implements OnInit {
   readonly errorMessage = signal<string | null>(null);
 
   // Estados de modales
+  readonly isDetalleOpen = signal<boolean>(false);
   readonly isFormOpen = signal<boolean>(false);
   readonly isStockMinimoOpen = signal<boolean>(false);
   readonly isConfirmOpen = signal<boolean>(false);
@@ -499,13 +658,27 @@ export class ProductosPage implements OnInit {
     this.isFormOpen.set(true);
   }
 
+  openDetalleDialog(p: ProductoResponse): void {
+    this.selectedProducto.set(p);
+    this.isDetalleOpen.set(true);
+  }
+
   openEditDialog(p: ProductoResponse): void {
     this.selectedProducto.set(p);
     this.isFormOpen.set(true);
   }
 
-  openStockMinimoDialog(p: ProductoResponse): void {
-    this.selectedProducto.set(p);
+  /** El stock se modifica registrando un movimiento: se reutiliza el formulario de entrada existente. */
+  goActualizarStock(p: ProductoResponse): void {
+    this.router.navigate(['/operaciones/entrada'], {
+      queryParams: { productoId: p.id },
+      state: { producto: p }
+    });
+  }
+
+  /** Desde el detalle (solo consulta) se deriva al formulario de stock mínimo ya existente. */
+  onDetalleStockMinimo(): void {
+    this.isDetalleOpen.set(false);
     this.isStockMinimoOpen.set(true);
   }
 

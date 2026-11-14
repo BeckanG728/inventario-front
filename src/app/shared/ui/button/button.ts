@@ -32,6 +32,19 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
       display: inline-block;
     }
 
+    /* Alinea iconos (svg) y texto proyectados en el mismo eje vertical */
+    .btn__content {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+    }
+
+    .btn__content ::ng-deep svg {
+      flex-shrink: 0;
+      display: block;
+    }
+
     :host([block]) {
       display: block;
       width: 100%;
