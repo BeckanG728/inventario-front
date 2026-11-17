@@ -46,31 +46,31 @@ export const routes: Routes = [
       {
         path: 'catalogo',
         canActivate: [roleGuard],
-        data: { roles: ['JEFE_TALLER', 'MECANICO'] },
+        data: { roles: ['JEFE_TALLER', 'MECANICO'], breadcrumb: 'Catálogo' },
         loadChildren: () => import('@features/catalogo/catalogo.routes').then(m => m.CATALOGO_ROUTES)
       },
       {
         path: 'inventario',
         canActivate: [roleGuard],
-        data: { roles: ['JEFE_TALLER', 'MECANICO'] },
+        data: { roles: ['JEFE_TALLER', 'MECANICO'], breadcrumb: 'Inventario' },
         loadChildren: () => import('@features/inventario/inventario.routes').then(m => m.INVENTARIO_ROUTES)
       },
       {
         path: 'operaciones',
         canActivate: [roleGuard],
-        data: { roles: ['JEFE_TALLER', 'MECANICO'] },
+        data: { roles: ['JEFE_TALLER', 'MECANICO'], breadcrumb: 'Operaciones' },
         loadChildren: () => import('@features/operaciones/operaciones.routes').then(m => m.OPERACIONES_ROUTES)
       },
       {
         path: 'reportes',
         canActivate: [roleGuard],
-        data: { roles: ['JEFE_TALLER'] },
+        data: { roles: ['JEFE_TALLER'], breadcrumb: 'Reportes' },
         loadChildren: () => import('@features/reportes/reportes.routes').then(m => m.REPORTES_ROUTES)
       },
       {
         path: 'admin',
         canActivate: [roleGuard],
-        data: { roles: ['ADMIN'] },
+        data: { roles: ['ADMIN'], breadcrumb: 'Administración' },
         loadChildren: () => import('@features/admin/admin.routes').then(m => m.ADMIN_ROUTES)
       },
       {
