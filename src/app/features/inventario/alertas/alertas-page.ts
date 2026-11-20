@@ -41,7 +41,7 @@ import { Badge } from '@shared/ui/badge/badge';
       </app-button>
     </app-page-header>
 
-    <app-pill-nav [items]="navItems" ariaLabel="Módulo de inventario" />
+    <app-pill-nav [items]="navItems()" ariaLabel="Módulo de inventario" />
 
     <!-- Tarjeta resumen -->
     @if (!cargando() && alertas().length > 0) {
@@ -275,10 +275,10 @@ export class AlertasPage implements OnInit {
   readonly skeletonItems = Array(5).fill(null);
 
   // ── Nav ────────────────────────────────────────────────────────────────────
-  readonly navItems: PillNavItem[] = [
-    { label: 'Existencias', route: '/inventario/existencias' },
-    { label: 'Alertas',     route: '/inventario/alertas' },
-  ];
+  readonly navItems = computed<PillNavItem[]>(() => [
+    ...(this.esJefeTaller() ? [{ label: 'Existencias', route: '/inventario/existencias' }] : []),
+    { label: 'Alertas', route: '/inventario/alertas' },
+  ]);
 
   ngOnInit(): void {
     this.cargar();

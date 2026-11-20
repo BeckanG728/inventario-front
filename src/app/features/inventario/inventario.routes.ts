@@ -12,7 +12,7 @@ export const INVENTARIO_ROUTES: Routes = [
     path: 'existencias',
     title: 'Existencias',
     canActivate: [roleGuard],
-    data: { roles: ['JEFE_TALLER', 'MECANICO'] },
+    data: { roles: ['JEFE_TALLER'] },
     loadComponent: () =>
       import('./existencias/existencias-page').then(m => m.ExistenciasPage)
   },
