@@ -12,7 +12,7 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/catalogo/productos': ['JEFE_TALLER', 'MECANICO'],
   '/catalogo/categorias': ['JEFE_TALLER'],
   '/catalogo/proveedores': ['JEFE_TALLER'],
-  '/inventario/existencias': ['JEFE_TALLER', 'MECANICO'],
+  '/inventario/existencias': ['JEFE_TALLER'],
   '/inventario/alertas': ['JEFE_TALLER', 'MECANICO'],
   '/operaciones/consumo': ['JEFE_TALLER', 'MECANICO'],
   '/operaciones/entrada': ['JEFE_TALLER'],

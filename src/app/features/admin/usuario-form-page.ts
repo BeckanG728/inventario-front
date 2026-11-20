@@ -105,7 +105,7 @@ import { Button } from '@shared/ui/button/button';
               formControlName="role"
               [attr.aria-invalid]="!!roleError()"
             >
-              <option value="MECANICO">Mecánico (Registra consumos, consulta existencias)</option>
+              <option value="MECANICO">Mecánico (Registra consumos, consulta productos y alertas)</option>
               <option value="JEFE_TALLER">Jefe de Taller (Administra catálogo, entradas y reportes)</option>
             </select>
           </app-field>
