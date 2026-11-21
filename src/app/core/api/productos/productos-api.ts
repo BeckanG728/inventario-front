@@ -16,6 +16,11 @@ export interface ListarProductosParams {
   size?: number;
   nombre?: string;
   categoria?: number;
+  codigo?: string;
+  proveedor?: number;
+  unidadMedida?: string;
+  activo?: boolean;
+  stockCritico?: boolean;
 }
 
 @Injectable({
@@ -25,7 +30,7 @@ export class ProductosApi {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_BASE_URL);
 
-  listar(params: ListarProductosParams = {}): Observable<PaginaResponse<ProductoResponse>> {
+    listar(params: ListarProductosParams = {}): Observable<PaginaResponse<ProductoResponse>> {
     let httpParams = new HttpParams();
 
     if (params.page !== undefined && params.page !== null) {
@@ -39,6 +44,21 @@ export class ProductosApi {
     }
     if (params.categoria !== undefined && params.categoria !== null && params.categoria > 0) {
       httpParams = httpParams.set('categoria', params.categoria.toString());
+    }
+    if (params.codigo && params.codigo.trim()) {
+      httpParams = httpParams.set('codigo', params.codigo.trim());
+    }
+    if (params.proveedor !== undefined && params.proveedor !== null && params.proveedor > 0) {
+      httpParams = httpParams.set('proveedor', params.proveedor.toString());
+    }
+    if (params.unidadMedida && params.unidadMedida.trim()) {
+      httpParams = httpParams.set('unidadMedida', params.unidadMedida.trim());
+    }
+    if (params.activo !== undefined && params.activo !== null) {
+      httpParams = httpParams.set('activo', String(params.activo));
+    }
+    if (params.stockCritico !== undefined && params.stockCritico !== null) {
+      httpParams = httpParams.set('stockCritico', String(params.stockCritico));
     }
 
     return this.http.get<PaginaResponse<ProductoResponse>>(`${this.baseUrl}/productos`, {

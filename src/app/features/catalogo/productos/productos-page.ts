@@ -4,7 +4,8 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { LucideBan, LucideEye, LucidePackagePlus, LucidePencil } from '@lucide/angular';
-import { ProductosApi } from '@core/api/productos/productos-api';
+import { ListarProductosParams, ProductosApi } from '@core/api/productos/productos-api';
+import { CatalogoApi } from '@core/api/catalogo/catalogo-api';
 import { ProductoResponse } from '@core/api/productos/productos.models';
 import { CatalogoLookup } from '@core/lookup/catalogo-lookup';
 import { SessionStore } from '@core/auth/session-store';
@@ -97,7 +98,68 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
           Actualizar listado
         </app-button>
       </div>
+
+      <div class="filter-bar data-panel">
+      <div class="filter-inputs">
+        <input
+          type="search"
+          class="search-input search-input--plain"
+          placeholder="Código (ej. PRD-0001)"
+          aria-label="Filtrar por código"
+          [formControl]="codigoControl"
+        />
+
+        <select
+          class="category-select"
+          [formControl]="proveedorControl"
+          aria-label="Filtrar por proveedor"
+        >
+          <option value="0">Todos los proveedores</option>
+          @for (prv of catalogoLookup.proveedores(); track prv.id) {
+            <option [value]="prv.id">{{ prv.razonSocial }}</option>
+          }
+        </select>
+
+        <select
+          class="category-select"
+          [formControl]="unidadControl"
+          aria-label="Filtrar por unidad de medida"
+        >
+          <option value="">Todas las unidades</option>
+          @for (u of unidades; track u) {
+            <option [value]="u">{{ u }}</option>
+          }
+        </select>
+
+        <select
+          class="category-select"
+          [formControl]="estadoControl"
+          aria-label="Filtrar por estado del producto"
+        >
+          <option value="">Activos e inactivos</option>
+          <option value="true">Solo activos</option>
+          <option value="false">Solo inactivos</option>
+        </select>
+
+        <select
+          class="category-select"
+          [formControl]="stockControl"
+          aria-label="Filtrar por nivel de stock"
+        >
+          <option value="">Cualquier stock</option>
+          <option value="true">Stock crítico</option>
+          <option value="false">Stock normal</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <app-button variant="outline" size="sm" (btnClick)="limpiarFiltros()">
+          Limpiar filtros
+        </app-button>
+      </div>
     </div>
+    </div>
+    
 
     @if (errorMessage()) {
       <div class="inline-alert inline-alert--error" role="alert">
@@ -319,6 +381,7 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
     .filter-inputs {
       display: flex;
       flex-direction: column;
+      flex-wrap: wrap;
       gap: var(--space-3);
       flex: 1;
     }
@@ -363,6 +426,12 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
       color: var(--color-text-primary);
       font-size: var(--font-size-body);
       min-height: var(--touch-target-min);
+    }
+
+    .search-input--plain {
+      width: auto;
+      flex: 1 1 180px;
+      padding-left: 14px;
     }
 
     .table-loading {
@@ -541,6 +610,7 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
 })
 export class ProductosPage implements OnInit {
   private readonly productosApi = inject(ProductosApi);
+  private readonly catalogoApi = inject(CatalogoApi);
   readonly catalogoLookup = inject(CatalogoLookup);
   private readonly session = inject(SessionStore);
   private readonly toast = inject(ToastService);
@@ -557,6 +627,12 @@ export class ProductosPage implements OnInit {
 
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly categoryControl = new FormControl(0, { nonNullable: true });
+  readonly codigoControl = new FormControl('', { nonNullable: true });
+  readonly proveedorControl = new FormControl('0', { nonNullable: true });
+  readonly unidadControl = new FormControl('', { nonNullable: true });
+  readonly estadoControl = new FormControl('', { nonNullable: true });   
+  readonly stockControl = new FormControl('', { nonNullable: true });    
+  readonly unidades = ['UNIDAD', 'CAJA', 'GALON', 'JUEGO', 'KIT', 'KILOGRAMO', 'LITRO', 'METRO', 'PAR'];
 
   readonly productos = signal<ProductoResponse[]>([]);
   readonly currentPage = signal<number>(0);
@@ -578,13 +654,32 @@ export class ProductosPage implements OnInit {
     return p ? `¿Estás seguro de que deseas desactivar el repuesto "${p.codigo} — ${p.nombre}"?` : '';
   });
 
-  ngOnInit(): void {
+    ngOnInit(): void {
+    // Solo el jefe puede consultar los listados de catálogo: se usan para llenar los selectores.
+    if (this.isJefeTaller()) {
+      this.catalogoApi.listarCategorias({ size: 100 }).subscribe({
+        next: resp => this.catalogoLookup.registrarCategorias(resp.content),
+        error: () => { /* los selectores usan lo que ya se conoce */ }
+      });
+      this.catalogoApi.listarProveedores({ size: 100 }).subscribe({
+        next: resp => this.catalogoLookup.registrarProveedores(resp.content),
+        error: () => { /* los selectores usan lo que ya se conoce */ }
+      });
+    }
+
     // Sincronizar query params iniciales
     this.route.queryParams.subscribe(params => {
       const page = params['page'] !== undefined ? parseInt(params['page'], 10) : 0;
       const size = params['size'] !== undefined ? parseInt(params['size'], 10) : 10;
       const nombre = params['nombre'] || '';
       const categoria = params['categoria'] !== undefined ? parseInt(params['categoria'], 10) : 0;
+      const codigo = params['codigo'] || '';
+      const proveedor = String(parseInt(params['proveedor'], 10) || 0);
+      const unidadMedida = params['unidadMedida'] || '';
+      const activo = params['activo'] === 'true' || params['activo'] === 'false' ? params['activo'] : '';
+      const stockCritico = params['stockCritico'] === 'true' || params['stockCritico'] === 'false'
+        ? params['stockCritico']
+        : '';
 
       this.currentPage.set(page);
       this.pageSize.set(size);
@@ -593,6 +688,21 @@ export class ProductosPage implements OnInit {
       }
       if (this.categoryControl.value !== categoria) {
         this.categoryControl.setValue(categoria, { emitEvent: false });
+      }
+      if (this.codigoControl.value !== codigo) {
+        this.codigoControl.setValue(codigo, { emitEvent: false });
+      }
+      if (this.proveedorControl.value !== proveedor) {
+        this.proveedorControl.setValue(proveedor, { emitEvent: false });
+      }
+      if (this.unidadControl.value !== unidadMedida) {
+        this.unidadControl.setValue(unidadMedida, { emitEvent: false });
+      }
+      if (this.estadoControl.value !== activo) {
+        this.estadoControl.setValue(activo, { emitEvent: false });
+      }
+      if (this.stockControl.value !== stockCritico) {
+        this.stockControl.setValue(stockCritico, { emitEvent: false });
       }
 
       this.loadProductos();
@@ -612,17 +722,46 @@ export class ProductosPage implements OnInit {
     ).subscribe(catId => {
       this.updateQueryParams({ categoria: catId > 0 ? catId : null, page: 0 });
     });
+
+    // Filtro por código (texto, con debounce)
+    this.codigoControl.valueChanges.pipe(
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe(text => {
+      this.updateQueryParams({ codigo: text.trim() || null, page: 0 });
+    });
+
+    // Filtros por selección
+    this.proveedorControl.valueChanges.pipe(distinctUntilChanged()).subscribe(id => {
+      this.updateQueryParams({ proveedor: Number(id) > 0 ? id : null, page: 0 });
+    });
+    this.unidadControl.valueChanges.pipe(distinctUntilChanged()).subscribe(unidad => {
+      this.updateQueryParams({ unidadMedida: unidad || null, page: 0 });
+    });
+    this.estadoControl.valueChanges.pipe(distinctUntilChanged()).subscribe(valor => {
+      this.updateQueryParams({ activo: valor || null, page: 0 });
+    });
+    this.stockControl.valueChanges.pipe(distinctUntilChanged()).subscribe(valor => {
+      this.updateQueryParams({ stockCritico: valor || null, page: 0 });
+    });
   }
 
   loadProductos(): void {
     this.loading.set(true);
     this.errorMessage.set(null);
 
-    const params = {
+    const proveedorId = Number(this.proveedorControl.value);
+
+    const params: ListarProductosParams = {
       page: this.currentPage(),
       size: this.pageSize(),
       nombre: this.searchControl.value.trim() || undefined,
-      categoria: this.categoryControl.value > 0 ? this.categoryControl.value : undefined
+      categoria: this.categoryControl.value > 0 ? this.categoryControl.value : undefined,
+      codigo: this.codigoControl.value.trim() || undefined,
+      proveedor: proveedorId > 0 ? proveedorId : undefined,
+      unidadMedida: this.unidadControl.value || undefined,
+      activo: this.estadoControl.value === '' ? undefined : this.estadoControl.value === 'true',
+      stockCritico: this.stockControl.value === '' ? undefined : this.stockControl.value === 'true'
     };
 
     this.productosApi.listar(params).subscribe({
@@ -638,6 +777,24 @@ export class ProductosPage implements OnInit {
         const apiErr = parseApiError(err);
         this.errorMessage.set(apiErr.message || 'Error al cargar el listado de productos.');
       }
+    });
+  }
+
+  /** Quita todos los filtros (y vuelve a la primera página). */
+  limpiarFiltros(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        nombre: null,
+        categoria: null,
+        codigo: null,
+        proveedor: null,
+        unidadMedida: null,
+        activo: null,
+        stockCritico: null,
+        page: 0
+      },
+      queryParamsHandling: 'merge'
     });
   }
 
