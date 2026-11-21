@@ -54,6 +54,32 @@ export class CatalogoLookup {
     });
   }
 
+  registrarCategorias(categorias: CategoriaResponse[]): void {
+    if (categorias.length === 0) return;
+    this._categorias.update(list => {
+      const mapa = new Map(list.map(c => [c.id, c]));
+      for (const c of categorias) {
+        mapa.set(c.id, c);
+      }
+      const actualizado = Array.from(mapa.values());
+      this.saveToStorage(STORAGE_CAT_KEY, actualizado);
+      return actualizado;
+    });
+  }
+
+  registrarProveedores(proveedores: ProveedorResponse[]): void {
+    if (proveedores.length === 0) return;
+    this._proveedores.update(list => {
+      const mapa = new Map(list.map(p => [p.id, p]));
+      for (const p of proveedores) {
+        mapa.set(p.id, p);
+      }
+      const actualizado = Array.from(mapa.values());
+      this.saveToStorage(STORAGE_PRV_KEY, actualizado);
+      return actualizado;
+    });
+  }
+
   extraerDeProductos(productos: ProductoResponse[]): void {
     if (!productos || productos.length === 0) return;
 
