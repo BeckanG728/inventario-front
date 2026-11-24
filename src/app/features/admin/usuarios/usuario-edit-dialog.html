@@ -1,0 +1,59 @@
+<app-modal
+  title="Editar usuario"
+  size="sm"
+  [(isOpen)]="isOpen"
+  (closed)="onCancel()"
+>
+  @if (generalError()) {
+    <div class="inline-alert inline-alert--error form-alert" role="alert">
+      <span>{{ generalError() }}</span>
+    </div>
+  }
+
+  @if (usuario()) {
+    <p class="user-info">
+      Usuario: <strong>{{ usuario()?.username }}</strong>
+    </p>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+    <app-field
+      label="Rol asignado"
+      forId="edit-role"
+      [required]="true"
+      hint="El cambio de rol surte efecto en la siguiente petición"
+      [error]="roleError()"
+    >
+      <select id="edit-role" formControlName="role" [attr.aria-invalid]="!!roleError()">
+        @for (role of roles; track role) {
+          <option [value]="role">{{ roleLabel(role) }}</option>
+        }
+      </select>
+    </app-field>
+
+    <app-field
+      label="Estado de la cuenta"
+      forId="edit-activo"
+      hint="Una cuenta inactiva no puede iniciar sesión"
+    >
+      <select id="edit-activo" formControlName="activo">
+        <option [ngValue]="true">Activo</option>
+        <option [ngValue]="false">Inactivo</option>
+      </select>
+    </app-field>
+  </form>
+
+  <div modal-footer class="dialog-actions">
+    <app-button variant="secondary" [disabled]="submitting()" (btnClick)="onCancel()">
+      Cancelar
+    </app-button>
+    <app-button
+      type="submit"
+      variant="primary"
+      [loading]="submitting()"
+      (btnClick)="onSubmit()"
+    >
+      Guardar cambios
+    </app-button>
+  </div>
+</app-modal>

@@ -1,0 +1,142 @@
+.filter-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.search-input-wrap {
+  position: relative;
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.search-input,
+.filter-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-input-bg);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  min-height: var(--touch-target-min);
+}
+
+.search-input {
+  padding-left: 38px;
+}
+
+.filter-select {
+  width: auto;
+  min-width: 170px;
+}
+
+.table-loading {
+  opacity: 0.6;
+  transition: opacity var(--duration-fast) var(--easing-out);
+}
+
+.usuarios-table {
+  min-width: 720px;
+}
+
+.usuarios-table th,
+.usuarios-table td {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.usuario-row {
+  height: 64px;
+}
+
+.usuario-row td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  vertical-align: middle;
+  font-size: 13.5px;
+}
+
+.row-inactive td:not(.action-cell) {
+  opacity: 0.65;
+}
+
+.cell-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.cell-user strong {
+  color: var(--color-text-primary);
+}
+
+.cell-user__id,
+.cell-date {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.action-cell {
+  white-space: nowrap;
+  width: 130px;
+  text-align: center;
+}
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.row-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--easing-out),
+              color var(--duration-fast) var(--easing-out);
+}
+
+.row-btn svg {
+  display: block;
+}
+
+.row-btn:hover:not(:disabled) {
+  background-color: var(--color-surface-hover);
+}
+
+.row-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

@@ -1,0 +1,173 @@
+<app-page-header
+  title="Usuarios del sistema"
+  subtitle="Listado, roles y estado de las cuentas del taller"
+>
+  <app-button variant="primary" (btnClick)="irANuevoUsuario()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+    Nuevo usuario
+  </app-button>
+</app-page-header>
+
+<div class="filter-bar data-panel">
+  <div class="filter-inputs">
+    <div class="search-input-wrap">
+      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input
+        type="search"
+        class="search-input"
+        placeholder="Buscar por nombre de usuario..."
+        [formControl]="searchControl"
+      />
+    </div>
+
+    <select class="filter-select" [formControl]="roleControl" aria-label="Filtrar por rol">
+      <option value="">Todos los roles</option>
+      @for (role of roles; track role) {
+        <option [value]="role">{{ roleLabel(role) }}</option>
+      }
+    </select>
+
+    <select class="filter-select" [formControl]="estadoControl" aria-label="Filtrar por estado">
+      <option value="">Activos e inactivos</option>
+      <option value="true">Solo activos</option>
+      <option value="false">Solo inactivos</option>
+    </select>
+  </div>
+
+  <div class="filter-actions">
+    <app-button variant="outline" size="sm" (btnClick)="loadUsuarios()">
+      Actualizar listado
+    </app-button>
+    <app-button variant="outline" size="sm" (btnClick)="limpiarFiltros()">
+      Limpiar filtros
+    </app-button>
+  </div>
+</div>
+
+@if (errorMessage()) {
+  <div class="inline-alert inline-alert--error" role="alert">
+    <span>{{ errorMessage() }}</span>
+    <app-button variant="secondary" size="sm" (btnClick)="loadUsuarios()">
+      Reintentar
+    </app-button>
+  </div>
+}
+
+<div class="table-wrapper" [class.table-loading]="loading() && usuarios().length > 0">
+  <table class="usuarios-table">
+    <thead>
+      <tr>
+        <th>Usuario</th>
+        <th>Rol</th>
+        <th>Estado</th>
+        <th>Creado</th>
+        <th class="action-cell">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (loading() && usuarios().length === 0) {
+        @for (s of [1, 2, 3, 4, 5]; track s) {
+          <tr class="usuario-row">
+            <td><div class="skeleton" style="width: 140px; height: 16px;"></div></td>
+            <td><div class="skeleton" style="width: 100px; height: 20px;"></div></td>
+            <td><div class="skeleton" style="width: 70px; height: 20px;"></div></td>
+            <td><div class="skeleton" style="width: 120px; height: 16px;"></div></td>
+            <td class="action-cell"><div class="skeleton" style="width: 80px; height: 36px; margin: 0 auto;"></div></td>
+          </tr>
+        }
+      } @else if (usuarios().length === 0) {
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">
+              <div class="empty-state__icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+              </div>
+              <h3 class="empty-state__title">No se encontraron usuarios</h3>
+              <p class="empty-state__description">
+                No hay cuentas que coincidan con los filtros seleccionados.
+              </p>
+              <app-button variant="primary" size="sm" (btnClick)="irANuevoUsuario()">
+                Registrar usuario
+              </app-button>
+            </div>
+          </td>
+        </tr>
+      } @else {
+        @for (u of usuarios(); track u.id) {
+          <tr class="usuario-row" [class.row-inactive]="!u.activo">
+            <td>
+              <div class="cell-user">
+                <strong>{{ u.username }}</strong>
+                <span class="cell-user__id font-mono">#{{ u.id }}</span>
+              </div>
+            </td>
+            <td>
+              <app-badge [variant]="roleVariant(u.role)" size="sm">{{ roleLabel(u.role) }}</app-badge>
+            </td>
+            <td>
+              @if (u.activo) {
+                <app-badge variant="success" size="sm">Activo</app-badge>
+              } @else {
+                <app-badge variant="danger" size="sm">Inactivo</app-badge>
+              }
+            </td>
+            <td class="cell-date font-mono">{{ u.createdAt | appDateTime }}</td>
+            <td class="action-cell">
+              <div class="row-actions">
+                <button
+                  type="button"
+                  class="row-btn"
+                  title="Editar rol o estado"
+                  [attr.aria-label]="'Editar ' + u.username"
+                  (click)="openEditDialog(u)"
+                >
+                  <svg lucidePencil [size]="17" aria-hidden="true"></svg>
+                </button>
+                <button
+                  type="button"
+                  class="row-btn"
+                  title="Restablecer contraseña"
+                  [attr.aria-label]="'Restablecer contraseña de ' + u.username"
+                  (click)="openPasswordDialog(u)"
+                >
+                  <svg lucideKeyRound [size]="17" aria-hidden="true"></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>
+
+<app-pagination
+  [page]="currentPage()"
+  [size]="pageSize()"
+  [totalElements]="totalElements()"
+  [totalPages]="totalPages()"
+  (pageChange)="onPageChange($event)"
+/>
+
+<app-usuario-edit-dialog
+  [(isOpen)]="isEditOpen"
+  [usuario]="selectedUsuario()"
+  (saved)="onUsuarioActualizado($event)"
+/>
+
+<app-usuario-password-dialog
+  [(isOpen)]="isPasswordOpen"
+  [usuario]="selectedUsuario()"
+  (saved)="onPasswordActualizado($event)"
+/>

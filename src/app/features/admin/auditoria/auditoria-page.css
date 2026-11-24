@@ -1,0 +1,128 @@
+.filter-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.search-input-wrap {
+  position: relative;
+  flex: 1 1 200px;
+  min-width: 180px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.search-input,
+.filter-select,
+.date-input,
+.resultado-input {
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-input-bg);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body);
+  min-height: var(--touch-target-min);
+}
+
+.search-input {
+  width: 100%;
+  padding-left: 38px;
+}
+
+.filter-select,
+.date-input {
+  width: auto;
+  min-width: 150px;
+}
+
+.resultado-input {
+  width: 170px;
+}
+
+.table-loading {
+  opacity: 0.6;
+  transition: opacity var(--duration-fast) var(--easing-out);
+}
+
+.auditoria-table {
+  min-width: 1040px;
+}
+
+.auditoria-table th,
+.auditoria-table td {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.auditoria-row {
+  height: 64px;
+}
+
+.auditoria-row td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  vertical-align: middle;
+  font-size: 13.5px;
+}
+
+.cell-date,
+.cell-actor__id,
+.cell-recurso__id {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.cell-actor,
+.cell-recurso {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cell-actor strong {
+  color: var(--color-text-primary);
+}
+
+.cell-operacion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  max-width: 260px;
+  min-width: 0;
+}
+
+.metodo {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.endpoint {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}

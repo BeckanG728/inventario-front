@@ -19,7 +19,9 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/inventario/movimientos': ['JEFE_TALLER'],
   '/reportes/valor-inventario': ['JEFE_TALLER'],
   '/reportes/estadisticas': ['JEFE_TALLER'],
-  '/admin/usuarios/nuevo': ['ADMIN']
+  '/admin/usuarios': ['ADMIN'],
+  '/admin/usuarios/nuevo': ['ADMIN'],
+  '/admin/auditoria': ['ADMIN']
 };
 
 /**
@@ -28,7 +30,7 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
 export function getRoleHome(role: UserRole | null | undefined): string {
   switch (role) {
     case 'ADMIN':
-      return '/admin/usuarios/nuevo';
+      return '/admin/usuarios';
     case 'JEFE_TALLER':
       return '/dashboard';
     case 'MECANICO':
