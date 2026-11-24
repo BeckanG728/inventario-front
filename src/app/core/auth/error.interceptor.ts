@@ -15,7 +15,11 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((err: unknown) => {
       if (err instanceof HttpErrorResponse) {
         // 401 Unauthorized: token expirado o sesión inválida
-        if (err.status === 401 && !req.url.includes('/auth/login')) {
+        if (err.status === 401) {
+          const token = session.token();
+          if (!token || req.headers.get('Authorization') !== 'Bearer ' + token) {
+            return throwError(() => err);
+          }
           session.clear();
           const currentUrl = router.url;
           router.navigate(['/login'], { queryParams: { returnUrl: currentUrl } });
