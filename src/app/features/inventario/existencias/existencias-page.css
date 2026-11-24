@@ -1,0 +1,124 @@
+.filter-panel {
+  margin-bottom: var(--space-5);
+}
+
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 150px;
+}
+
+.filter-field--wide {
+  flex: 2;
+  min-width: 220px;
+}
+
+.filter-field label {
+  font-size: var(--font-size-label);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.filter-input {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body);
+  color: var(--color-text-primary);
+  background: var(--color-input-bg);
+  outline: none;
+  min-height: 40px;
+}
+
+.filter-input:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.filter-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.alert-box {
+  margin-bottom: var(--space-5);
+}
+
+.table-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-body);
+}
+
+.data-table th, .data-table td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.data-table th {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--color-surface-raised);
+}
+
+.data-table tbody tr:hover {
+  background: var(--color-surface-raised);
+}
+
+.name-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 500;
+  color: var(--color-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.name-link:hover {
+  text-decoration: underline;
+}
+
+.row-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-input-bg);
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.empty-cell {
+  padding: var(--space-8) var(--space-4);
+}
+
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.font-mono { font-family: var(--font-mono); }
+.font-weight-bold { font-weight: 700; }
+.text-muted { color: var(--color-text-muted); }
+.color-secondary { color: var(--color-text-secondary); }

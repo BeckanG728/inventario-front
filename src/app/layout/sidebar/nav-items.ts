@@ -1,9 +1,7 @@
 // src/app/layout/sidebar/nav-items.ts
 import {
   LucideArrowLeftRight,
-  LucideChartColumn,
   LucideChartLine,
-  LucideChartNoAxesCombined,
   LucideCircleDollarSign,
   LucideLayoutDashboard,
   LucidePackage,
@@ -11,8 +9,6 @@ import {
   LucidePackagePlus,
   LucideSlidersHorizontal,
   LucideTags,
-  LucideTrendingDown,
-  LucideTriangleAlert,
   LucideTruck,
   LucideUserPlus,
   LucideWarehouse
@@ -70,35 +66,30 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'Inventario',
     entries: [
       { kind: 'link', id: 'existencias', label: 'Existencias', route: '/inventario/existencias', icon: LucideWarehouse },
-      { kind: 'link', id: 'alertas', label: 'Alertas de stock', route: '/inventario/alertas', icon: LucideTriangleAlert }
+      { kind: 'link', id: 'rep-movimientos', label: 'Movimientos', route: '/inventario/movimientos', icon: LucideArrowLeftRight }
     ]
   },
   {
     id: 'operaciones',
     title: 'Operaciones',
     entries: [
-      { kind: 'link', id: 'consumo', label: 'Registrar consumo', route: '/operaciones/consumo', icon: LucidePackageMinus },
       { kind: 'link', id: 'entrada', label: 'Registrar entrada', route: '/operaciones/entrada', icon: LucidePackagePlus },
+      { kind: 'link', id: 'consumo', label: 'Registrar consumo', route: '/operaciones/consumo', icon: LucidePackageMinus },
       { kind: 'link', id: 'ajuste', label: 'Registrar ajuste', route: '/operaciones/ajuste', icon: LucideSlidersHorizontal }
+    ]
+  },
+  {
+    id: 'reportes',
+    title: 'Reportes',
+    entries: [
+      { kind: 'link', id: 'rep-valor', label: 'Valorización', route: '/reportes/valor-inventario', icon: LucideCircleDollarSign },
+      { kind: 'link', id: 'rep-estadisticas', label: 'Estadísticas', route: '/reportes/estadisticas', icon: LucideChartLine }
     ]
   },
   {
     id: 'administracion',
     title: 'Administración',
     entries: [
-      {
-        kind: 'group',
-        id: 'reportes',
-        label: 'Reportes',
-        icon: LucideChartNoAxesCombined,
-        children: [
-          { kind: 'link', id: 'rep-movimientos', label: 'Movimientos', route: '/reportes/movimientos', icon: LucideArrowLeftRight },
-          { kind: 'link', id: 'rep-consumo', label: 'Consumo', route: '/reportes/consumo', icon: LucideChartColumn },
-          { kind: 'link', id: 'rep-valor', label: 'Valor de inventario', route: '/reportes/valor-inventario', icon: LucideCircleDollarSign },
-          { kind: 'link', id: 'rep-bajo-stock', label: 'Bajo stock', route: '/reportes/bajo-stock', icon: LucideTrendingDown },
-          { kind: 'link', id: 'rep-estadisticas', label: 'Estadísticas', route: '/reportes/estadisticas', icon: LucideChartLine }
-        ]
-      },
       { kind: 'link', id: 'usuarios', label: 'Usuarios', route: '/admin/usuarios/nuevo', icon: LucideUserPlus }
     ]
   }

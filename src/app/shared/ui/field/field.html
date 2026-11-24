@@ -1,0 +1,24 @@
+<div class="field" [class.field--error]="hasError()" [class.field--pill]="variant() === 'pill'">
+  @if (label()) {
+    <label [attr.for]="forId()" class="field__label">
+      {{ label() }}
+      @if (required()) {
+        <span class="field__required" aria-hidden="true">*</span>
+      }
+    </label>
+  }
+
+  <div class="field__control">
+    <ng-content />
+  </div>
+
+  @if (hasError()) {
+    <div [id]="errorId()" class="field__error" role="alert">
+      {{ error() }}
+    </div>
+  } @else if (hint()) {
+    <div [id]="hintId()" class="field__hint">
+      {{ hint() }}
+    </div>
+  }
+</div>

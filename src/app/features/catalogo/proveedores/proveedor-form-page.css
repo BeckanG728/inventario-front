@@ -1,0 +1,95 @@
+    .data-panel {
+      height: fit-content;
+    }
+
+    .list-filters {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+
+    @media (min-width: 768px) {
+      .list-filters {
+        flex-direction: row;
+      }
+    }
+
+    .list-input,
+    .list-select {
+      padding: 10px 14px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background-color: var(--color-input-bg);
+      color: var(--color-text-primary);
+      font-size: var(--font-size-body);
+      min-height: var(--touch-target-min);
+    }
+
+    .list-input {
+      flex: 1;
+    }
+
+    .list-input--ruc {
+      flex: 0 1 220px;
+    }
+
+    .list-alert {
+      margin-bottom: var(--space-4);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .table-loading {
+      opacity: 0.6;
+      transition: opacity var(--duration-fast) var(--easing-out);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-body);
+    }
+
+    .data-table th, .data-table td {
+      padding: var(--space-3) var(--space-4);
+      text-align: left;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .data-table th {
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--color-surface-raised);
+    }
+
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .data-table tbody tr:hover {
+      background: var(--color-surface-raised);
+    }
+
+    .row-inactive {
+      opacity: 0.6;
+    }
+
+    .text-right { text-align: right; }
+
+    .font-mono { font-family: var(--font-family-mono); }
+
+    .empty-state {
+      padding: var(--space-8);
+      text-align: center;
+    }
+
+    .empty-state__description {
+      color: var(--color-text-secondary);
+    }

@@ -9,18 +9,15 @@ export type { UserRole };
  */
 export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/dashboard': ['JEFE_TALLER'],
-  '/catalogo/productos': ['JEFE_TALLER', 'MECANICO'],
+  '/catalogo/productos': ['JEFE_TALLER'],
   '/catalogo/categorias': ['JEFE_TALLER'],
   '/catalogo/proveedores': ['JEFE_TALLER'],
-  '/inventario/existencias': ['JEFE_TALLER'],
-  '/inventario/alertas': ['JEFE_TALLER', 'MECANICO'],
+  '/inventario/existencias': ['JEFE_TALLER', 'MECANICO'],
   '/operaciones/consumo': ['JEFE_TALLER', 'MECANICO'],
   '/operaciones/entrada': ['JEFE_TALLER'],
   '/operaciones/ajuste': ['JEFE_TALLER'],
-  '/reportes/movimientos': ['JEFE_TALLER'],
-  '/reportes/consumo': ['JEFE_TALLER'],
+  '/inventario/movimientos': ['JEFE_TALLER'],
   '/reportes/valor-inventario': ['JEFE_TALLER'],
-  '/reportes/bajo-stock': ['JEFE_TALLER'],
   '/reportes/estadisticas': ['JEFE_TALLER'],
   '/admin/usuarios/nuevo': ['ADMIN']
 };

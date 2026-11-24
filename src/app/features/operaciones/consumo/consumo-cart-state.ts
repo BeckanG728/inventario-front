@@ -1,9 +1,23 @@
 // src/app/features/operaciones/consumo/consumo-cart-state.ts
 import { computed, Injectable, signal } from '@angular/core';
-import { ProductoResponse } from '@core/api/productos/productos.models';
+
+/**
+ * Modelo interno único del selector de productos de consumo.
+ * Normaliza `productoId` (frecuentes) e `id` (búsqueda de /api/productos).
+ */
+export interface ProductoSelector {
+  productoId: number;
+  codigo: string;
+  nombre: string;
+  unidadMedida: string;
+  stockActual: number;
+  stockMinimo: number;
+  categoriaNombre: string;
+  vecesConsumido?: number;
+}
 
 export interface ConsumoCartItem {
-  producto: ProductoResponse;
+  producto: ProductoSelector;
   cantidad: number;
 }
 
@@ -25,11 +39,11 @@ export class ConsumoCartState {
     this._items().some(item => item.cantidad > item.producto.stockActual)
   );
 
-  addItem(producto: ProductoResponse, cantidad = 1): void {
+  addItem(producto: ProductoSelector, cantidad = 1): void {
     if (cantidad <= 0) return;
 
     this._items.update(current => {
-      const index = current.findIndex(i => i.producto.id === producto.id);
+      const index = current.findIndex(i => i.producto.productoId === producto.productoId);
       if (index >= 0) {
         const copy = [...current];
         copy[index] = {
@@ -50,13 +64,13 @@ export class ConsumoCartState {
 
     this._items.update(current =>
       current.map(i =>
-        i.producto.id === productoId ? { ...i, cantidad: nuevaCantidad } : i
+        i.producto.productoId === productoId ? { ...i, cantidad: nuevaCantidad } : i
       )
     );
   }
 
   removeItem(productoId: number): void {
-    this._items.update(current => current.filter(i => i.producto.id !== productoId));
+    this._items.update(current => current.filter(i => i.producto.productoId !== productoId));
   }
 
   clear(): void {

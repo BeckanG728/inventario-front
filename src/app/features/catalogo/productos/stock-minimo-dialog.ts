@@ -14,87 +14,8 @@ import { Button } from '@shared/ui/button/button';
   standalone: true,
   imports: [ReactiveFormsModule, Modal, Field, Button],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <app-modal
-      title="Actualizar stock mínimo"
-      size="sm"
-      [(isOpen)]="isOpen"
-      (closed)="onCancel()"
-    >
-      @if (generalError()) {
-        <div class="inline-alert inline-alert--error form-alert" role="alert">
-          <span>{{ generalError() }}</span>
-        </div>
-      }
-
-      @if (producto()) {
-        <p class="product-info">
-          Repuesto: <strong>{{ producto()?.codigo }}</strong> — {{ producto()?.nombre }}
-        </p>
-      }
-
-      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-        <app-field
-          label="Nuevo stock mínimo"
-          forId="nuevoStockMinimo"
-          [required]="true"
-          hint="Cantidad límite que disparará la alerta de reposición urgente"
-          [error]="stockMinimoError()"
-        >
-          <input
-            id="nuevoStockMinimo"
-            type="number"
-            min="0"
-            step="1"
-            formControlName="nuevoStockMinimo"
-            [attr.aria-invalid]="!!stockMinimoError()"
-          />
-        </app-field>
-      </form>
-
-      <div modal-footer class="dialog-actions">
-        <app-button
-          variant="secondary"
-          [disabled]="submitting()"
-          (btnClick)="onCancel()"
-        >
-          Cancelar
-        </app-button>
-
-        <app-button
-          type="submit"
-          variant="primary"
-          [loading]="submitting()"
-          (btnClick)="onSubmit()"
-        >
-          Guardar stock mínimo
-        </app-button>
-      </div>
-    </app-modal>
-  `,
-  styles: [`
-    .form-alert {
-      margin-bottom: var(--space-3);
-    }
-
-    .product-info {
-      margin-top: 0;
-      margin-bottom: var(--space-4);
-      font-size: var(--font-size-body);
-      color: var(--color-text-secondary);
-    }
-
-    .product-info strong {
-      color: var(--color-text-primary);
-    }
-
-    .dialog-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: var(--space-3);
-      width: 100%;
-    }
-  `]
+  templateUrl: './stock-minimo-dialog.html',
+  styleUrl: './stock-minimo-dialog.css'
 })
 export class StockMinimoDialog {
   private readonly fb = inject(NonNullableFormBuilder);

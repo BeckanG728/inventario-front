@@ -1,7 +1,6 @@
 // src/app/core/api/productos/productos.models.ts
 
 export interface CreateProductoRequest {
-  codigo: string;
   nombre: string;
   descripcion?: string;
   unidadMedida: string;
@@ -14,7 +13,6 @@ export interface CreateProductoRequest {
 }
 
 export interface UpdateProductoRequest {
-  codigo: string;
   nombre: string;
   descripcion?: string;
   unidadMedida: string;

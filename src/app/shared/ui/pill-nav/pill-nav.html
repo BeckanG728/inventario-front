@@ -1,0 +1,11 @@
+<nav class="pill-tab-group" [attr.aria-label]="ariaLabel()">
+  @for (item of items(); track item.route) {
+    <a
+      [routerLink]="item.route"
+      routerLinkActive="pill-tab--active"
+      class="pill-tab"
+    >
+      {{ item.label }}
+    </a>
+  }
+</nav>

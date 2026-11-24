@@ -35,54 +35,8 @@ function buildCrumbs(root: ActivatedRouteSnapshot): string[] {
   standalone: true,
   imports: [LucideDynamicIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    @if (crumbs().length > 1) {
-      <nav class="breadcrumbs" aria-label="Ubicación actual">
-        <ol class="breadcrumbs__list">
-          @for (crumb of crumbs(); track $index; let last = $last) {
-            <li class="breadcrumbs__item" [attr.aria-current]="last ? 'page' : null">
-              {{ crumb }}
-              @if (!last) {
-                <svg [lucideIcon]="separatorIcon" [size]="14" [strokeWidth]="1.75"></svg>
-              }
-            </li>
-          }
-        </ol>
-      </nav>
-    }
-  `,
-  styles: [`
-    :host {
-      display: block;
-    }
-
-    .breadcrumbs {
-      margin-bottom: var(--space-4);
-    }
-
-    .breadcrumbs__list {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--space-1);
-      margin: 0;
-      padding: 0;
-      list-style: none;
-      font-size: 13px;
-      color: var(--color-text-muted);
-    }
-
-    .breadcrumbs__item {
-      display: inline-flex;
-      align-items: center;
-      gap: var(--space-1);
-    }
-
-    .breadcrumbs__item[aria-current="page"] {
-      color: var(--color-text-primary);
-      font-weight: 600;
-    }
-  `]
+  templateUrl: './breadcrumbs.html',
+  styleUrl: './breadcrumbs.css'
 })
 export class Breadcrumbs {
   private readonly router = inject(Router);

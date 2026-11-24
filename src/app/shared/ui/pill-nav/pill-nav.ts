@@ -12,27 +12,8 @@ export interface PillNavItem {
   standalone: true,
   imports: [RouterLink, RouterLinkActive],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <nav class="pill-tab-group" [attr.aria-label]="ariaLabel()">
-      @for (item of items(); track item.route) {
-        <a
-          [routerLink]="item.route"
-          routerLinkActive="pill-tab--active"
-          class="pill-tab"
-        >
-          {{ item.label }}
-        </a>
-      }
-    </nav>
-  `,
-  styles: [`
-    :host {
-      display: block;
-      margin-bottom: var(--space-5);
-      border-bottom: 1px solid var(--color-border);
-      padding-bottom: var(--space-2);
-    }
-  `]
+  templateUrl: './pill-nav.html',
+  styleUrl: './pill-nav.css'
 })
 export class PillNav {
   readonly items = input.required<PillNavItem[]>();

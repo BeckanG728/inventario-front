@@ -1,0 +1,164 @@
+<app-page-header
+  title="Registrar entrada de inventario"
+  subtitle="Recepción de mercadería de compras a proveedores con actualización de costo unitario"
+/>
+
+@if (errorAlert()) {
+  <div class="inline-alert inline-alert--error alert-box" role="alert">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <span>{{ errorAlert() }}</span>
+  </div>
+}
+
+@if (lastSuccess(); as s) {
+  <div class="inline-alert inline-alert--success alert-box" role="status">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    </svg>
+    <div>
+      <strong>¡Entrada registrada con éxito!</strong>
+      <p>
+        Movimiento #{{ s.movimiento.id }}: Se sumaron <strong>+{{ s.movimiento.cantidad }}</strong> unidades
+        al producto. Nuevo stock disponible: <strong>{{ s.movimiento.stockPosterior }}</strong>.
+      </p>
+    </div>
+  </div>
+}
+
+<div class="entrada-layout">
+  <div class="data-panel form-card">
+    <div class="panel-head">
+      <h2>Datos de la recepción</h2>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+      <!-- Producto fijado desde la tabla (acción "Actualizar stock") -->
+      @if (productoFijoId() !== null) {
+        <div class="fixed-field">
+          <span class="fixed-field__label">Repuesto / Producto <span class="fixed-field__req">*</span></span>
+          @if (selectedProducto(); as pf) {
+            <div class="fixed-field__box">
+              <span><strong>{{ pf.codigo }}</strong> — {{ pf.nombre }}</span>
+              <button type="button" class="link-btn" (click)="liberarProducto()">Elegir otro producto</button>
+            </div>
+          } @else {
+            <div class="fixed-field__box">Cargando producto…</div>
+          }
+        </div>
+      } @else {
+      <!-- Selector de producto -->
+      <app-field
+        label="Repuesto / Producto"
+        forId="productoId"
+        [required]="true"
+        hint="Selecciona el producto recibido del catálogo"
+        [error]="productoError()"
+      >
+        <select id="productoId" formControlName="productoId" (change)="onProductoChange()">
+          <option [value]="0">-- Selecciona un producto --</option>
+          @for (p of productos(); track p.id) {
+            <option [value]="p.id">
+              {{ p.codigo }} — {{ p.nombre }} (Stock actual: {{ p.stockActual }})
+            </option>
+          }
+        </select>
+      </app-field>
+      }
+
+      <!-- Info rápida del producto seleccionado -->
+      @if (selectedProducto(); as p) {
+        <div class="product-preview">
+          <div class="preview-item">
+            <span class="preview-label">Stock actual:</span>
+            <span class="preview-value"><strong>{{ p.stockActual }}</strong> {{ p.unidadMedida }}</span>
+          </div>
+          <div class="preview-item">
+            <span class="preview-label">Último costo de compra:</span>
+            <span class="preview-value">
+              {{ p.costoUltimaCompra ? (p.costoUltimaCompra | appCurrency) : 'Sin compras registradas' }}
+            </span>
+          </div>
+        </div>
+      }
+
+      <!-- Selector de proveedor -->
+      <app-field
+        label="Proveedor distribuidor"
+        forId="proveedorId"
+        [required]="true"
+        hint="Proveedor asociado al producto seleccionado (no editable)"
+        [error]="proveedorError()"
+      >
+        <select id="proveedorId" formControlName="proveedorId">
+          @if (proveedorDelProducto(); as prv) {
+            <option [value]="prv.id">{{ prv.ruc ? prv.ruc + ' — ' : '' }}{{ prv.razonSocial }}</option>
+          } @else {
+            <option [value]="0">-- Selecciona primero un producto --</option>
+          }
+        </select>
+      </app-field>
+
+      <div class="form-row">
+        <!-- Cantidad ingresada -->
+        <app-field
+          label="Cantidad recibida"
+          forId="cantidad"
+          [required]="true"
+          hint="Unidades físicas verificadas"
+          [error]="cantidadError()"
+        >
+          <input
+            id="cantidad"
+            type="number"
+            min="1"
+            step="1"
+            formControlName="cantidad"
+            placeholder="1"
+          />
+        </app-field>
+
+        <!-- Costo unitario -->
+        <app-field
+          label="Costo unitario (S/)"
+          forId="costoUnitario"
+          [required]="true"
+          hint="Precio unitario de compra sin IGV"
+          [error]="costoError()"
+        >
+          <input
+            id="costoUnitario"
+            type="number"
+            min="0.01"
+            step="0.01"
+            formControlName="costoUnitario"
+            placeholder="0.00"
+          />
+        </app-field>
+      </div>
+
+      <!-- Total de compra calculado -->
+      @if (costoTotalCalculado() > 0) {
+        <div class="total-bar">
+          <span>Importe total estimado de la entrada:</span>
+          <strong>{{ costoTotalCalculado() | appCurrency }}</strong>
+        </div>
+      }
+
+      <div class="form-actions">
+        <app-button
+          type="submit"
+          variant="primary"
+          [disabled]="form.invalid || submitting()"
+          [loading]="submitting()"
+        >
+          Registrar entrada
+        </app-button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,67 @@
+<header class="topbar">
+  <div class="topbar__start">
+    <!-- Control de Sidebar -->
+    <button
+      type="button"
+      class="topbar__icon-btn"
+      (click)="layout.toggle()"
+      [attr.aria-label]="toggleLabel()"
+      [attr.title]="toggleLabel()"
+      [attr.aria-expanded]="sidebarExpanded()"
+      aria-controls="app-sidebar"
+    >
+      <svg [lucideIcon]="toggleIcon()" [size]="20" [strokeWidth]="1.75"></svg>
+    </button>
+
+    <!-- Identidad del sistema -->
+    <a routerLink="/" class="topbar__brand" aria-label="Taller Mecánico, ir al inicio">
+      <svg [lucideIcon]="icons.wrench" [size]="22" [strokeWidth]="1.75"></svg>
+      <span class="topbar__brand-text">Taller Mecánico</span>
+    </a>
+  </div>
+
+  <div class="topbar__end">
+    <!-- Selector de tema -->
+    <button
+      type="button"
+      class="topbar__icon-btn topbar__icon-btn--bordered"
+      (click)="theme.toggleTheme()"
+      [attr.title]="themeLabel()"
+      [attr.aria-label]="themeLabel()"
+    >
+      <svg [lucideIcon]="theme.currentTheme() === 'light' ? icons.moon : icons.sun" [size]="18" [strokeWidth]="1.75"></svg>
+    </button>
+
+    <!-- Perfil de usuario -->
+    <div class="user-menu">
+      <button
+        #trigger
+        type="button"
+        class="user-menu__trigger"
+        (click)="toggleMenu()"
+        [attr.aria-expanded]="menuOpen()"
+        aria-controls="user-menu-panel"
+        aria-label="Menú de usuario"
+      >
+        <span class="user-menu__avatar" aria-hidden="true">{{ initial() }}</span>
+        <span class="user-menu__name">{{ session.username() }}</span>
+        <span class="user-menu__caret">
+          <svg [lucideIcon]="icons.chevronDown" [size]="16" [strokeWidth]="1.75"></svg>
+        </span>
+      </button>
+
+      @if (menuOpen()) {
+        <div id="user-menu-panel" class="user-menu__panel">
+          <div class="user-menu__header">
+            <span class="user-menu__header-name">{{ session.username() }}</span>
+            <app-badge [variant]="roleBadgeVariant()" size="sm">{{ roleLabel() }}</app-badge>
+          </div>
+          <button type="button" class="user-menu__item" (click)="logout()">
+            <svg [lucideIcon]="icons.logOut" [size]="18" [strokeWidth]="1.75"></svg>
+            Cerrar sesión
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+</header>

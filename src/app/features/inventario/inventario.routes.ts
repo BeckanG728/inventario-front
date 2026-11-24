@@ -12,16 +12,16 @@ export const INVENTARIO_ROUTES: Routes = [
     path: 'existencias',
     title: 'Existencias',
     canActivate: [roleGuard],
-    data: { roles: ['JEFE_TALLER'] },
+    data: { roles: ['JEFE_TALLER', 'MECANICO'] },
     loadComponent: () =>
       import('./existencias/existencias-page').then(m => m.ExistenciasPage)
   },
   {
-    path: 'alertas',
-    title: 'Alertas de bajo stock',
+    path: 'movimientos',
+    title: 'Movimientos de Inventario',
     canActivate: [roleGuard],
-    data: { roles: ['JEFE_TALLER', 'MECANICO'] },
+    data: { roles: ['JEFE_TALLER'] },
     loadComponent: () =>
-      import('./alertas/alertas-page').then(m => m.AlertasPage)
+      import('./movimientos/reporte-movimientos-page').then(m => m.ReporteMovimientosPage)
   }
 ];
