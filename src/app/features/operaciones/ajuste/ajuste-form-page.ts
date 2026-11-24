@@ -69,6 +69,10 @@ export class AjusteFormPage implements OnInit {
   }
 
   onSubmit(): void {
+    if (this.submitting()) {
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
