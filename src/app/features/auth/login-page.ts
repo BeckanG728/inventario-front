@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AuthApi } from '@core/api/auth/auth-api';
 import { SessionStore } from '@core/auth/session-store';
 import { getRoleHome } from '@core/auth/roles';
-import { parseApiError } from '@core/api/api-error';
+import { describeApiError, parseApiError } from '@core/api/api-error';
 import { Field } from '@shared/ui/field/field';
 import { Button } from '@shared/ui/button/button';
 
@@ -26,6 +26,7 @@ export class LoginPage {
 
   readonly submitting = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly errorCode = signal<string | null>(null);
   readonly showPassword = signal<boolean>(false);
 
   readonly form = this.fb.group({
@@ -66,6 +67,7 @@ export class LoginPage {
 
     this.submitting.set(true);
     this.errorMessage.set(null);
+    this.errorCode.set(null);
 
     const { username, password } = this.form.getRawValue();
 
@@ -87,12 +89,15 @@ export class LoginPage {
       error: (err) => {
         this.submitting.set(false);
         const apiError = parseApiError(err);
+        this.errorCode.set(apiError.code);
 
         if (apiError.status === 401) {
           this.errorMessage.set('Usuario o contraseña incorrectos.');
           this.form.controls.password.reset();
         } else if (apiError.status === 0) {
           this.errorMessage.set('No se puede conectar con el servidor. Revisa tu red.');
+        } else if (apiError.isRateLimit) {
+          this.errorMessage.set(describeApiError(apiError, 'Demasiadas peticiones.'));
         } else {
           this.errorMessage.set(apiError.message || 'Error al iniciar sesión.');
         }

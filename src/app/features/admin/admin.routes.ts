@@ -4,12 +4,24 @@ import { Routes } from '@angular/router';
 export const ADMIN_ROUTES: Routes = [
   {
     path: '',
-    redirectTo: 'usuarios/nuevo',
+    redirectTo: 'usuarios',
     pathMatch: 'full'
   },
   {
     path: 'usuarios/nuevo',
     title: 'Registrar usuario',
     loadComponent: () => import('./usuario-form-page').then(m => m.UsuarioFormPage)
+  },
+  {
+    path: 'usuarios',
+    title: 'Usuarios',
+    pathMatch: 'full',
+    loadComponent: () => import('./usuarios/usuarios-page').then(m => m.UsuariosPage)
+  },
+  {
+    path: 'auditoria',
+    title: 'Auditoría de operaciones',
+    pathMatch: 'full',
+    loadComponent: () => import('./auditoria/auditoria-page').then(m => m.AuditoriaPage)
   }
 ];

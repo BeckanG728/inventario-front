@@ -6,7 +6,12 @@
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="auth-panel" novalidate>
           @if (errorMessage()) {
-            <div class="inline-alert inline-alert--error" role="alert">
+            <div
+              class="inline-alert"
+              [class.inline-alert--warning]="errorCode() === 'RATE_LIMIT_EXCEEDED'"
+              [class.inline-alert--error]="errorCode() !== 'RATE_LIMIT_EXCEEDED'"
+              role="alert"
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
                 <line x1="12" y1="8" x2="12" y2="12"></line>

@@ -7,10 +7,12 @@ import {
   LucidePackage,
   LucidePackageMinus,
   LucidePackagePlus,
+  LucideScrollText,
   LucideSlidersHorizontal,
   LucideTags,
   LucideTruck,
   LucideUserPlus,
+  LucideUsers,
   LucideWarehouse
 } from '@lucide/angular';
 import type { LucideIconInput } from '@lucide/angular';
@@ -90,7 +92,9 @@ const NAV_SECTIONS: NavSection[] = [
     id: 'administracion',
     title: 'Administración',
     entries: [
-      { kind: 'link', id: 'usuarios', label: 'Usuarios', route: '/admin/usuarios/nuevo', icon: LucideUserPlus }
+      { kind: 'link', id: 'usuarios', label: 'Usuarios', route: '/admin/usuarios', icon: LucideUsers },
+      { kind: 'link', id: 'usuarios-nuevo', label: 'Nuevo usuario', route: '/admin/usuarios/nuevo', icon: LucideUserPlus },
+      { kind: 'link', id: 'auditoria', label: 'Auditoría', route: '/admin/auditoria', icon: LucideScrollText }
     ]
   }
 ];

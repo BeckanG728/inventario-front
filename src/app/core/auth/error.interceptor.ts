@@ -3,6 +3,7 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
+import { describeApiError, parseApiError } from '../api/api-error';
 import { SessionStore } from './session-store';
 import { ToastService } from '../notifications/toast-service';
 
@@ -31,6 +32,12 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
             router.navigate(['/acceso-denegado']);
           } else {
             toast.error('No tienes permisos suficientes para realizar esta acción.');
+          }
+        }
+        // 429 Too Many Requests: el login lo muestra en su propio formulario
+        else if (err.status === 429) {
+          if (!req.url.includes('/auth/login')) {
+            toast.warning(describeApiError(parseApiError(err), 'Demasiadas peticiones.'));
           }
         }
         // 500+ Internal Server Error

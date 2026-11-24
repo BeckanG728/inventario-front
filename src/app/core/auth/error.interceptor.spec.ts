@@ -1,4 +1,4 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, HttpHeaders, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -13,6 +13,8 @@ describe('errorInterceptor', () => {
   const token = signal<string | null>(null);
   const clear = vi.fn(() => token.set(null));
   const navigate = vi.fn();
+  const warning = vi.fn();
+  const error = vi.fn();
   let http: HttpClient;
   let requests: HttpTestingController;
 
@@ -20,13 +22,15 @@ describe('errorInterceptor', () => {
     token.set('token-anterior');
     clear.mockClear();
     navigate.mockClear();
+    warning.mockClear();
+    error.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
         provideHttpClientTesting(),
         { provide: SessionStore, useValue: { token, clear } },
         { provide: Router, useValue: { url: '/inventario', navigate } },
-        { provide: ToastService, useValue: { warning: vi.fn() } }
+        { provide: ToastService, useValue: { warning, error } }
       ]
     });
     http = TestBed.inject(HttpClient);
@@ -57,5 +61,37 @@ describe('errorInterceptor', () => {
 
     expect(clear).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledTimes(1);
+  });
+
+  it('avisa del límite de peticiones con el tiempo de Retry-After', () => {
+    http.get('/api/productos').subscribe({ error: () => {} });
+    requests.expectOne('/api/productos').flush(
+      { error: 'RATE_LIMIT_EXCEEDED', message: 'Demasiadas peticiones' },
+      {
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: new HttpHeaders({ 'Retry-After': '12' })
+      }
+    );
+
+    expect(warning).toHaveBeenCalledTimes(1);
+    expect(warning.mock.calls[0][0]).toContain('12 s');
+    expect(clear).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('no duplica el aviso del límite en el formulario de login', () => {
+    http.post('/api/auth/login', {}).subscribe({ error: () => {} });
+    requests.expectOne('/api/auth/login').flush(
+      { error: 'RATE_LIMIT_EXCEEDED', message: 'Demasiados intentos' },
+      {
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: new HttpHeaders({ 'Retry-After': '60' })
+      }
+    );
+
+    expect(warning).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 });
