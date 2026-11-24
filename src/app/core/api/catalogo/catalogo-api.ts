@@ -53,6 +53,16 @@ export class CatalogoApi {
     return this.http.post<ProveedorResponse>(`${this.baseUrl}/proveedores`, body);
   }
 
+  /** GET /api/categorias/activos — lista ligera sin paginar (JEFE_TALLER, MECANICO). */
+  listarCategoriasActivas(): Observable<CategoriaResponse[]> {
+    return this.http.get<CategoriaResponse[]>(`${this.baseUrl}/categorias/activos`);
+  }
+
+  /** GET /api/proveedores/activos — lista ligera sin paginar (JEFE_TALLER, MECANICO). */
+  listarProveedoresActivos(): Observable<ProveedorResponse[]> {
+    return this.http.get<ProveedorResponse[]>(`${this.baseUrl}/proveedores/activos`);
+  }
+
   /** GET /api/categorias — lista paginada (solo JEFE_TALLER). */
   listarCategorias(params: ListarCategoriasParams = {}): Observable<PaginaResponse<CategoriaResponse>> {
     return this.http.get<PaginaResponse<CategoriaResponse>>(`${this.baseUrl}/categorias`, {

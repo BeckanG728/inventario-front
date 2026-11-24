@@ -1,0 +1,178 @@
+<app-page-header
+  title="Existencias de inventario"
+  subtitle="Productos activos con su stock actual, mínimo y estado; filtre por categoría, proveedor o nivel de stock"
+/>
+
+<!-- Filtros operativos -->
+<div class="data-panel filter-panel">
+  <form class="filter-form" (ngSubmit)="onFiltroChange()">
+    <div class="filter-field filter-field--wide">
+      <label for="existencias-nombre">Buscar producto</label>
+      <input
+        id="existencias-nombre"
+        type="search"
+        class="filter-input"
+        placeholder="Buscar por nombre o código…"
+        autocomplete="off"
+        [ngModel]="filtroNombre()"
+        (ngModelChange)="onNombreChange($event)"
+        name="nombre"
+      />
+    </div>
+
+    <div class="filter-field">
+      <label for="existencias-categoria">Categoría</label>
+      <select
+        id="existencias-categoria"
+        class="filter-input"
+        [ngModel]="categoriaFiltro()"
+        (ngModelChange)="onCategoriaChange($event)"
+        name="categoria"
+      >
+        <option [value]="0">Todas</option>
+        @for (cat of catalogoLookup.categorias(); track cat.id) {
+          <option [value]="cat.id">{{ cat.nombre }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="existencias-proveedor">Proveedor</label>
+      <select
+        id="existencias-proveedor"
+        class="filter-input"
+        [ngModel]="proveedorFiltro()"
+        (ngModelChange)="onProveedorChange($event)"
+        name="proveedor"
+      >
+        <option [value]="0">Todos</option>
+        @for (prv of catalogoLookup.proveedores(); track prv.id) {
+          <option [value]="prv.id">{{ prv.razonSocial }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-field">
+      <label for="existencias-estado">Nivel de stock</label>
+      <select
+        id="existencias-estado"
+        class="filter-input"
+        [ngModel]="estadoFiltro()"
+        (ngModelChange)="onEstadoChange($event)"
+        name="estado"
+      >
+        @for (op of estados; track op.value) {
+          <option [value]="op.value">{{ op.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-actions">
+      <app-button type="button" variant="outline" (btnClick)="limpiarFiltros()">
+        Limpiar
+      </app-button>
+    </div>
+  </form>
+</div>
+
+@if (errorMensaje()) {
+  <div class="inline-alert inline-alert--error alert-box" role="alert">
+    <span>{{ errorMensaje() }}</span>
+  </div>
+}
+
+<!-- Listado -->
+<div class="data-panel" [class.table-loading]="cargando()">
+  <div class="panel-head">
+    <h2>Productos activos</h2>
+    <span class="panel-hint">{{ totalElements() }} producto(s)</span>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="data-table" aria-label="Existencias de productos activos">
+      <thead>
+        <tr>
+          <th scope="col">Código</th>
+          <th scope="col">Producto</th>
+          <th scope="col">Categoría</th>
+          <th scope="col">Proveedor</th>
+          <th scope="col" class="text-right">Stock actual</th>
+          <th scope="col" class="text-right">Stock mínimo</th>
+          <th scope="col" class="text-center">Estado</th>
+          <th scope="col" class="text-right">A reponer</th>
+          @if (esJefeTaller()) {
+            <th scope="col" class="text-center">Acción</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of productos(); track p.id) {
+          <tr>
+            <td class="font-mono text-muted">{{ p.codigo }}</td>
+            <td>
+              <button
+                type="button"
+                class="name-link"
+                [attr.aria-label]="'Ver detalle de ' + p.nombre"
+                (click)="abrirDetalle(p)"
+              >{{ p.nombre }}</button>
+            </td>
+            <td>{{ p.categoriaNombre || catalogoLookup.getNombreCategoria(p.categoriaId) }}</td>
+            <td class="color-secondary">
+              {{ p.proveedorRazonSocial || catalogoLookup.getNombreProveedor(p.proveedorId) }}
+            </td>
+            <td class="text-right font-weight-bold">{{ p.stockActual }}</td>
+            <td class="text-right color-secondary">{{ p.stockMinimo }}</td>
+            <td class="text-center">
+              <app-stock-estado-badge
+                [stockActual]="p.stockActual"
+                [stockMinimo]="p.stockMinimo"
+              />
+            </td>
+            <td class="text-right font-weight-bold">{{ p.cantidadSugerida }}</td>
+            @if (esJefeTaller()) {
+              <td class="text-center">
+                <button
+                  type="button"
+                  class="row-btn"
+                  title="Registrar entrada de stock"
+                  [attr.aria-label]="'Registrar entrada de ' + p.nombre"
+                  (click)="registrarEntrada(p)"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                </button>
+              </td>
+            }
+          </tr>
+        } @empty {
+          @if (!cargando()) {
+            <tr>
+              <td [attr.colspan]="esJefeTaller() ? 9 : 8" class="text-center text-muted empty-cell">
+                No hay productos activos que coincidan con los filtros seleccionados.
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <app-pagination
+    [page]="page()"
+    [size]="size()"
+    [totalElements]="totalElements()"
+    [totalPages]="totalPages()"
+    (pageChange)="onPageChange($event)"
+  />
+</div>
+
+<app-producto-detalle-dialog
+  [(isOpen)]="isDetalleOpen"
+  [producto]="selectedProducto()"
+  [showCompras]="esJefeTaller()"
+  [canAdjustStockMinimo]="false"
+/>

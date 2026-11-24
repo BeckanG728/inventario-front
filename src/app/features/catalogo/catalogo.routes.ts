@@ -12,7 +12,7 @@ export const CATALOGO_ROUTES: Routes = [
     path: 'productos',
     title: 'Productos',
     canActivate: [roleGuard],
-    data: { roles: ['JEFE_TALLER', 'MECANICO'] },
+    data: { roles: ['JEFE_TALLER'] },
     loadComponent: () => import('./productos/productos-page').then(m => m.ProductosPage)
   },
   {

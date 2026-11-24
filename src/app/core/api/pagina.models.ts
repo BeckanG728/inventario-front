@@ -6,7 +6,4 @@ export interface PaginaResponse<T> {
   size: number;
   totalElements: number;
   totalPages: number;
-  last: boolean;
-  first: boolean;
-  empty: boolean;
 }

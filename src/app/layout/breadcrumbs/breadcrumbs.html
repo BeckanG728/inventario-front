@@ -1,0 +1,14 @@
+@if (crumbs().length > 1) {
+  <nav class="breadcrumbs" aria-label="Ubicación actual">
+    <ol class="breadcrumbs__list">
+      @for (crumb of crumbs(); track $index; let last = $last) {
+        <li class="breadcrumbs__item" [attr.aria-current]="last ? 'page' : null">
+          {{ crumb }}
+          @if (!last) {
+            <svg [lucideIcon]="separatorIcon" [size]="14" [strokeWidth]="1.75"></svg>
+          }
+        </li>
+      }
+    </ol>
+  </nav>
+}

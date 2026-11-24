@@ -1,0 +1,266 @@
+<app-page-header
+  title="Registrar consumo de repuestos"
+  subtitle="Registro rápido de piezas, lubricantes y materiales para órdenes de trabajo"
+/>
+
+
+<!-- Alerta de error del backend (ej. 409 Stock insuficiente) -->
+@if (errorAlert()) {
+  <div class="inline-alert inline-alert--error alert-box" role="alert">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <div>
+      <strong>No se pudo procesar el consumo:</strong>
+      <p>{{ errorAlert() }}</p>
+    </div>
+  </div>
+}
+
+<div class="consumo-layout">
+  <!-- Columna izquierda: Buscador y selección rápida de repuestos -->
+  <section class="catalog-column" aria-labelledby="catalog-heading">
+    <div class="data-panel picker-panel">
+      <div class="panel-head">
+        <h2 id="catalog-heading">Seleccionar repuestos</h2>
+        <span class="text-sm text-secondary">
+          @if (modoBusqueda()) { Resultados de búsqueda } @else { Productos frecuentes }
+        </span>
+      </div>
+
+      <!-- Buscador -->
+      <div class="search-box">
+        <label for="productoSearch" class="sr-only">Buscar por nombre o código</label>
+        <div class="input-with-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            id="productoSearch"
+            type="search"
+            class="field-input search-input"
+            placeholder="Buscar por código o nombre..."
+            [formControl]="searchControl"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+
+      <!-- Lista de productos buscados -->
+      <div class="product-list" role="region" aria-live="polite">
+        @if (loadingProducts()) {
+          <div class="loading-state">
+            <div class="skeleton-line" style="width: 100%; height: 50px;"></div>
+            <div class="skeleton-line" style="width: 100%; height: 50px;"></div>
+            <div class="skeleton-line" style="width: 100%; height: 50px;"></div>
+          </div>
+        } @else if (availableProducts().length === 0) {
+          <div class="empty-state">
+            <p>
+              @if (modoBusqueda()) {
+                No se encontraron repuestos activos con el criterio ingresado.
+              } @else {
+                Aún no hay consumos registrados para sugerir repuestos. Usa el buscador.
+              }
+            </p>
+          </div>
+        } @else {
+          <div class="product-cards">
+            @for (prod of availableProducts(); track prod.productoId) {
+              <article class="product-card" [class.is-out-of-stock]="prod.stockActual <= 0">
+                <div class="product-main">
+                  <div class="product-meta">
+                    <span class="code-badge">{{ prod.codigo }}</span>
+                    <app-stock-estado-badge
+                      [stockActual]="prod.stockActual"
+                      [stockMinimo]="prod.stockMinimo"
+                    />
+                  </div>
+                  <h3 class="product-name">{{ prod.nombre }}</h3>
+                  <div class="product-stock-info">
+                    <span>Stock disponible: <strong>{{ prod.stockActual }} {{ prod.unidadMedida }}</strong></span>
+                    @if (prod.categoriaNombre) {
+                      <span class="text-secondary text-xs">• {{ prod.categoriaNombre }}</span>
+                    }
+                    @if (!modoBusqueda() && prod.vecesConsumido) {
+                      <span class="text-secondary text-xs">• Usado {{ prod.vecesConsumido }} veces</span>
+                    }
+                  </div>
+                </div>
+
+                <div class="product-action">
+                  <app-button
+                    variant="secondary"
+                    size="md"
+                    [block]="true"
+                    [disabled]="prod.stockActual <= 0"
+                    (btnClick)="addToCart(prod)"
+                    [attr.aria-label]="'Agregar ' + prod.nombre + ' al consumo'"
+                  >
+                    + Agregar
+                  </app-button>
+                </div>
+              </article>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Columna derecha: Formulario de consumo y lista de materiales seleccionados (Carrito) -->
+  <section class="cart-column" aria-labelledby="cart-heading">
+    <div class="data-panel cart-panel">
+      <div class="panel-head">
+        <h2 id="cart-heading">Materiales a retirar</h2>
+        <app-badge variant="neutral">
+          {{ cart.totalLines() }} {{ cart.totalLines() === 1 ? 'ítem' : 'ítems' }}
+        </app-badge>
+      </div>
+
+      <!-- Formulario de datos generales -->
+      <form [formGroup]="form" class="consumo-form" novalidate>
+        <app-field
+          label="Finalidad / Motivo del trabajo"
+          forId="finalidad"
+          [required]="true"
+          hint="Ej. Mantenimiento 10.000 km, reparación de frenos, etc."
+          [error]="finalidadError()"
+        >
+          <input
+            id="finalidad"
+            type="text"
+            formControlName="finalidad"
+            placeholder="Descripción del trabajo..."
+            autocomplete="off"
+            maxlength="255"
+          />
+        </app-field>
+
+        <app-field
+          label="Referencia de vehículo / cliente (Opcional)"
+          forId="referenciaVehiculoCliente"
+          hint="Placa o nombre (Ej. ABC-123 / Juan Pérez)"
+          [error]="referenciaError()"
+        >
+          <input
+            id="referenciaVehiculoCliente"
+            type="text"
+            formControlName="referenciaVehiculoCliente"
+            placeholder="Placa o referencia..."
+            autocomplete="off"
+            maxlength="150"
+          />
+        </app-field>
+      </form>
+
+      <!-- Advertencia preventiva de sobregiro de stock -->
+      @if (cart.hasAnyStockExceeded()) {
+        <div class="inline-alert inline-alert--warning" role="alert">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Uno o más repuestos superan el stock registrado en el sistema.</span>
+        </div>
+      }
+
+      <!-- Lista de ítems en el carrito -->
+      <div class="cart-items-container">
+        @if (!cart.hasItems()) {
+          <div class="empty-cart">
+            <div class="empty-cart-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+              </svg>
+            </div>
+            <p class="empty-cart-text">No has seleccionado ningún repuesto aún.</p>
+            <span class="text-xs text-secondary">Usa el buscador para añadir piezas a la orden.</span>
+          </div>
+        } @else {
+          <ul class="cart-list" role="list">
+            @for (item of cart.items(); track item.producto.productoId) {
+              <li class="cart-item" [class.item-exceeded]="item.cantidad > item.producto.stockActual">
+                <div class="item-info">
+                  <div class="item-header">
+                    <span class="code-badge">{{ item.producto.codigo }}</span>
+                    @if (item.cantidad > item.producto.stockActual) {
+                      <app-badge variant="danger">Excede stock ({{ item.producto.stockActual }})</app-badge>
+                    }
+                  </div>
+                  <h4 class="item-name">{{ item.producto.nombre }}</h4>
+                  <span class="text-xs text-secondary">
+                    Disponible: {{ item.producto.stockActual }} {{ item.producto.unidadMedida }}
+                  </span>
+                </div>
+
+                <div class="item-controls">
+                  <!-- Stepper táctil (min 44px) -->
+                  <app-stepper
+                    [value]="item.cantidad"
+                    [min]="1"
+                    [max]="9999"
+                    [step]="1"
+                    (valueChange)="onQuantityChange(item.producto.productoId, $event)"
+                  />
+
+                  <button
+                    type="button"
+                    class="remove-btn"
+                    (click)="cart.removeItem(item.producto.productoId)"
+                    [attr.aria-label]="'Eliminar ' + item.producto.nombre"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <!-- Acciones dentro de la tarjeta de materiales -->
+      <div class="cart-actions">
+        <div class="cart-summary">
+          <span>Total de unidades: <strong>{{ cart.totalUnits() }}</strong></span>
+        </div>
+        <div class="action-buttons">
+          @if (cart.hasItems()) {
+            <app-button
+              variant="ghost"
+              (btnClick)="cart.clear()"
+              [disabled]="submitting()"
+            >
+              Vaciar
+            </app-button>
+          }
+          <app-button
+            variant="primary"
+            [block]="true"
+            [disabled]="!canSubmit()"
+            [loading]="submitting()"
+            (btnClick)="onSubmit()"
+          >
+            Confirmar consumo
+          </app-button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Modal con el resultado del consumo procesado -->
+<app-consumo-resultado-dialog
+  [consumo]="resultadoConsumo()"
+  [(isOpen)]="showResultadoDialog"
+  (closed)="onResultadoClosed()"
+/>

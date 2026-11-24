@@ -9,7 +9,8 @@ import {
   ConsumoResponse,
   EntradaRequest,
   EntradaResponse,
-  MovimientoResponse
+  MovimientoResponse,
+  ProductoFrecuente
 } from './operaciones.models';
 
 @Injectable({
@@ -18,6 +19,14 @@ import {
 export class OperacionesApi {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_BASE_URL);
+
+  /**
+   * Productos más consumidos por el usuario (GET /api/consumos/productos-frecuentes).
+   * Sin parámetros; devuelve hasta 5 filas listas para agregar al carrito.
+   */
+  getProductosFrecuentes(): Observable<ProductoFrecuente[]> {
+    return this.http.get<ProductoFrecuente[]>(`${this.baseUrl}/consumos/productos-frecuentes`);
+  }
 
   /**
    * Registra el consumo de materiales (POST /api/consumos).

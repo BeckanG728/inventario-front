@@ -1,0 +1,306 @@
+
+    <app-page-header
+      title="Estadísticas de Actividad de Inventario"
+      subtitle="Unidades de entrada y salida por día, semana o mes"
+    />
+
+    <app-pill-nav [items]="navItems" ariaLabel="Reportes del sistema" />
+
+    <!-- Panel de filtros -->
+    <div class="data-panel filter-panel">
+      <form class="filter-form" (ngSubmit)="cargar()">
+        <div class="filter-field">
+          <label for="stat-from">Fecha desde</label>
+          <input
+            id="stat-from"
+            type="date"
+            class="filter-input"
+            [ngModel]="from()"
+            (ngModelChange)="onFromChange($event)"
+            name="from"
+            required
+          />
+        </div>
+
+        <div class="filter-field">
+          <label for="stat-to">Fecha hasta</label>
+          <input
+            id="stat-to"
+            type="date"
+            class="filter-input"
+            [ngModel]="to()"
+            (ngModelChange)="onToChange($event)"
+            [max]="maxHastaPermitido() || undefined"
+            name="to"
+            required
+          />
+        </div>
+
+        <div class="filter-field">
+          <label id="gran-label">Granularidad</label>
+          <div class="granularity-toggle" role="radiogroup" aria-labelledby="gran-label">
+            <button
+              type="button"
+              class="gran-btn"
+              [class.gran-btn--active]="granularity() === 'AUTO'"
+              (click)="setGranularity('AUTO')"
+              role="radio"
+              [attr.aria-checked]="granularity() === 'AUTO'"
+            >
+              Auto
+            </button>
+            <button
+              type="button"
+              class="gran-btn"
+              [class.gran-btn--active]="granularity() === 'DAY'"
+              (click)="setGranularity('DAY')"
+              role="radio"
+              [attr.aria-checked]="granularity() === 'DAY'"
+            >
+              Día
+            </button>
+            <button
+              type="button"
+              class="gran-btn"
+              [class.gran-btn--active]="granularity() === 'WEEK'"
+              (click)="setGranularity('WEEK')"
+              role="radio"
+              [attr.aria-checked]="granularity() === 'WEEK'"
+            >
+              Semana
+            </button>
+            <button
+              type="button"
+              class="gran-btn"
+              [class.gran-btn--active]="granularity() === 'MONTH'"
+              (click)="setGranularity('MONTH')"
+              role="radio"
+              [attr.aria-checked]="granularity() === 'MONTH'"
+            >
+              Mes
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-actions">
+          <app-button
+            type="submit"
+            variant="primary"
+            [loading]="cargando()"
+            [disabled]="!!rangoError()"
+          >
+            Actualizar gráfico
+          </app-button>
+          <app-button
+            type="button"
+            variant="outline"
+            (btnClick)="resetFiltros()"
+          >
+            Mes actual
+          </app-button>
+        </div>
+      </form>
+
+      <p class="filter-hint">{{ rangoHint() }}</p>
+    </div>
+
+    @if (avisoAjuste()) {
+      <div class="inline-alert inline-alert--info alert-box" role="status">
+        <span>{{ avisoAjuste() }}</span>
+      </div>
+    }
+
+    @if (rangoError()) {
+      <div class="inline-alert inline-alert--warning alert-box" role="alert">
+        <span>{{ rangoError() }}</span>
+      </div>
+    }
+
+    @if (errorMensaje()) {
+      <div class="inline-alert inline-alert--error alert-box" role="alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="8"/>
+          <line x1="12" y1="12" x2="12" y2="16"/>
+        </svg>
+        <span>{{ errorMensaje() }}</span>
+      </div>
+    }
+
+    @if (!cargando() && hayDatos()) {
+      <!-- KPIs de actividad -->
+      <div class="stat-grid summary-grid">
+        <div class="stat-card-mini stat-card-mini--green">
+          <span class="label">Costo de entradas</span>
+          <span class="value">{{ totalCostoEntradas() | appCurrency }}</span>
+        </div>
+        <div class="stat-card-mini stat-card-mini--blue">
+          <span class="label">Costo de salidas</span>
+          <span class="value">{{ totalCostoSalidas() | appCurrency }}</span>
+        </div>
+        <div class="stat-card-mini stat-card-mini--teal">
+          <span class="label">Períodos con actividad</span>
+          <span class="value">{{ periodosActivos() }} de {{ items().length }}</span>
+        </div>
+      </div>
+
+      <!-- Gráfico de líneas SVG -->
+      <div class="data-panel chart-panel">
+        <div class="panel-head">
+          <h2>Entradas y salidas por período</h2>
+          <span class="panel-hint">Costos por {{ granularidadLabel() }}</span>
+        </div>
+
+        <div class="chart-legend" aria-hidden="true">
+          @for (s of seriesConfig; track s.key) {
+            <span class="legend-item">
+              <svg width="26" height="10" aria-hidden="true">
+                <line
+                  x1="1" y1="5" x2="25" y2="5"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  [style.stroke]="s.color"
+                  [attr.stroke-dasharray]="s.dash || null"
+                />
+              </svg>
+              {{ s.label }}
+            </span>
+          }
+        </div>
+
+        <div class="svg-container" role="img" [attr.aria-label]="chartAria()">
+          <svg
+            viewBox="0 0 800 290"
+            class="chart-svg"
+            preserveAspectRatio="xMidYMid meet"
+            (pointerleave)="hoverIdx.set(null)"
+          >
+            <!-- Cuadrícula y eje Y -->
+            @for (t of chart().ticks; track t.valor) {
+              <line
+                x1="60" [attr.y1]="t.y" x2="780" [attr.y2]="t.y"
+                [class]="t.valor === 0 ? 'axis-base' : 'grid-line'"
+              />
+              <text x="52" [attr.y]="t.y + 4" class="axis-label">{{ t.texto }}</text>
+            }
+
+            <!-- Etiquetas del eje X -->
+            @for (xl of chart().xLabels; track xl.x) {
+              <text
+                [attr.x]="xl.x"
+                y="242"
+                class="x-label"
+                [attr.text-anchor]="chart().rotarLabels ? 'end' : 'middle'"
+                [attr.transform]="chart().rotarLabels ? 'rotate(-35 ' + xl.x + ' 242)' : null"
+              >{{ xl.label }}</text>
+            }
+
+            <!-- Líneas de las dos series (solo trazo) -->
+            @for (s of chart().series; track s.key) {
+              <polyline
+                [attr.points]="s.points"
+                class="serie-line"
+                [style.stroke]="s.color"
+                [attr.stroke-dasharray]="s.dash || null"
+              />
+              @if (chart().mostrarMarcadores) {
+                @for (c of s.circles; track $index) {
+                  @if (s.marker === 'circle') {
+                    <circle [attr.cx]="c.x" [attr.cy]="c.y" r="3.5" class="marker" [style.stroke]="s.color" />
+                  } @else {
+                    <rect
+                      [attr.x]="c.x - 3.5" [attr.y]="c.y - 3.5" width="7" height="7" rx="1"
+                      class="marker"
+                      [style.stroke]="s.color"
+                    />
+                  }
+                }
+              }
+            }
+
+            <!-- Zonas de hover por período -->
+            @for (sl of chart().slots; track sl.i) {
+              <rect
+                [attr.x]="sl.x"
+                [attr.y]="30"
+                [attr.width]="sl.w"
+                [attr.height]="190"
+                class="hover-slot"
+                (pointerenter)="hoverIdx.set(sl.i)"
+                (click)="hoverIdx.set(sl.i)"
+              />
+            }
+
+            <!-- Tooltip -->
+            @if (tooltip(); as t) {
+              <g pointer-events="none">
+                <line [attr.x1]="t.x" [attr.x2]="t.x" y1="30" y2="220" class="hover-line" />
+                @for (d of t.dots; track d.color) {
+                  <circle [attr.cx]="t.x" [attr.cy]="d.y" r="4.5" class="hover-dot" [style.stroke]="d.color" />
+                }
+                <rect
+                  [attr.x]="t.boxX" y="34"
+                  [attr.width]="t.boxW" [attr.height]="t.boxH"
+                  rx="6" class="tip-box"
+                />
+                <text [attr.x]="t.boxX + 10" y="52" class="tip-title">{{ t.titulo }}</text>
+                @for (l of t.lines; track l.label) {
+                  <text [attr.x]="t.boxX + 10" [attr.y]="70 + $index * 16" class="tip-line">
+                    <tspan [style.fill]="l.color">●</tspan> {{ l.label }}: {{ l.valor }}
+                  </text>
+                }
+              </g>
+            }
+          </svg>
+        </div>
+
+        @if (hayAnteriores()) {
+          <div class="window-row">
+            <span class="panel-hint">Mostrando {{ visibleItems().length }} de {{ items().length }} períodos</span>
+            <app-button variant="outline" size="sm" (btnClick)="mostrarAnteriores()">
+              Mostrar períodos anteriores
+            </app-button>
+          </div>
+        }
+      </div>
+
+      <!-- Tabla complementaria -->
+      <div class="data-panel">
+        <div class="panel-head panel-head--row">
+          <h2>Detalle por período</h2>
+          <app-button variant="outline" size="sm" (btnClick)="toggleTabla()">
+            {{ tablaVisible() ? 'Ocultar detalle' : 'Ver detalle (' + items().length + ' períodos)' }}
+          </app-button>
+        </div>
+
+        @if (tablaVisible()) {
+          <div class="table-wrapper">
+            <table class="data-table" aria-label="Detalle de entradas y salidas por período">
+              <thead>
+                <tr>
+                  <th scope="col">Período</th>
+                  <th scope="col" class="text-right">Costo que entra</th>
+                  <th scope="col" class="text-right">Costo que sale</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of items(); track item.fecha) {
+                  <tr>
+                    <td class="font-weight-500 font-mono">{{ item.label }}</td>
+                    <td class="text-right font-weight-bold text-success">{{ item.costoEntrada | appCurrency }}</td>
+                    <td class="text-right font-weight-bold text-primary">{{ item.costoSalida | appCurrency }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    } @else if (!cargando() && !errorMensaje() && !hayDatos()) {
+      <div class="data-panel empty-panel">
+        <div class="empty-state">
+          <h2>Sin movimientos registrados</h2>
+          <p>No se encontraron entradas ni salidas en el rango de fechas seleccionado.</p>
+        </div>
+      </div>
+    }

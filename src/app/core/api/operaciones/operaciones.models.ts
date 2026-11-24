@@ -1,5 +1,21 @@
 // src/app/core/api/operaciones/operaciones.models.ts
+import { EstadoStock } from '../inventario/inventario.models';
 import { ProductoResponse } from '../productos/productos.models';
+
+/** Fila de GET /api/consumos/productos-frecuentes (sin parámetros, máx. 5). */
+export interface ProductoFrecuente {
+  productoId: number;
+  codigo: string;
+  nombre: string;
+  unidadMedida: string;
+  stockActual: number;
+  stockMinimo: number;
+  stockCritico: boolean;
+  estadoStock: EstadoStock;
+  categoriaNombre: string;
+  vecesConsumido: number;
+  unidadesConsumidas: number;
+}
 
 export type TipoMovimiento = 'ENTRADA' | 'CONSUMO' | 'AJUSTE';
 

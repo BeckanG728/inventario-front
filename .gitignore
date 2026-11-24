@@ -44,3 +44,6 @@ __screenshots__/
 Thumbs.db
 
 docs/
+
+# Planning / seguimiento local del agente
+/task/

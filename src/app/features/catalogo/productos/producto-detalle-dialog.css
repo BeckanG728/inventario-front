@@ -1,0 +1,120 @@
+    .detail-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding-bottom: var(--space-4);
+      margin-bottom: var(--space-4);
+      border-bottom: 1px solid var(--color-border-soft);
+    }
+
+    .detail-head__text {
+      min-width: 0;
+    }
+
+    .detail-name {
+      margin: 0 0 var(--space-1) 0;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      overflow-wrap: anywhere;
+    }
+
+    .detail-sku {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+    }
+
+    .detail-sections {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-5);
+    }
+
+    .detail-sections .detail-section + .detail-section {
+      margin-top: 0;
+    }
+
+    @media (min-width: 900px) {
+      .detail-sections {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-5) var(--space-8);
+        align-items: start;
+      }
+    }
+
+    .detail-section__title {
+      margin: 0 0 var(--space-3) 0;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-secondary);
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-3) var(--space-5);
+      margin: 0;
+    }
+
+    @media (min-width: 600px) {
+      .detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .detail-item--full {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .detail-item dt {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      margin-bottom: 2px;
+    }
+
+    .detail-item dd {
+      margin: 0;
+      font-size: var(--font-size-body);
+      color: var(--color-text-primary);
+      overflow-wrap: anywhere;
+    }
+
+    .detail-value--strong {
+      font-weight: 700;
+    }
+
+    .detail-note {
+      margin: 0 0 var(--space-2) 0;
+      font-size: 13px;
+      color: var(--color-text-secondary);
+    }
+
+    .detail-link {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-blue-text);
+      text-decoration: none;
+    }
+
+    .detail-link:hover {
+      text-decoration: underline;
+    }
+
+    .detail-link:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      border-radius: var(--radius-sm);
+    }
+
+    .detail-inline-action {
+      margin-top: var(--space-3);
+    }
+
+    .detail-actions {
+      display: flex;
+      justify-content: flex-end;
+      width: 100%;
+    }

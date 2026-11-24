@@ -1,0 +1,135 @@
+    <app-page-header
+      title="Categorías de productos"
+      subtitle="Registro de familias y clasificaciones de repuestos para el taller"
+    />
+
+    <div class="category-layout">
+      <div class="data-panel form-card">
+        <div class="panel-head">
+          <h2>Registrar nueva categoría</h2>
+          <span class="panel-meta">Catálogo</span>
+        </div>
+
+        @if (generalError()) {
+          <div class="inline-alert inline-alert--error form-alert" role="alert">
+            <span>{{ generalError() }}</span>
+          </div>
+        }
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+          <app-field
+            label="Nombre de la categoría"
+            forId="nombre"
+            [required]="true"
+            hint="De 3 a 50 caracteres (ej. Frenos, Motor, Suspensión, Eléctrico)"
+            [error]="nombreError()"
+          >
+            <input
+              id="nombre"
+              type="text"
+              formControlName="nombre"
+              autocomplete="off"
+              placeholder="Ej. Sistema de Frenos"
+              [attr.aria-invalid]="!!nombreError()"
+            />
+          </app-field>
+
+          <div class="form-actions">
+            <app-button
+              type="submit"
+              variant="primary"
+              size="lg"
+              [loading]="submitting()"
+            >
+              Registrar categoría
+            </app-button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Listado paginado (viene del servidor) -->
+      <div class="data-panel list-card">
+        <div class="panel-head">
+          <h3>Categorías registradas</h3>
+          <span class="panel-meta font-mono">{{ totalElements() }} en total</span>
+        </div>
+
+        <div class="list-filters">
+          <input
+            type="search"
+            class="list-input"
+            placeholder="Buscar por nombre..."
+            aria-label="Buscar categorías por nombre"
+            [formControl]="searchControl"
+          />
+          <select class="list-select" [formControl]="estadoControl" aria-label="Filtrar por estado">
+            <option value="">Todas</option>
+            <option value="true">Solo activas</option>
+            <option value="false">Solo inactivas</option>
+          </select>
+        </div>
+
+        @if (listError()) {
+          <div class="inline-alert inline-alert--error list-alert" role="alert">
+            <span>{{ listError() }}</span>
+            <app-button variant="secondary" size="sm" (btnClick)="cargar()">Reintentar</app-button>
+          </div>
+        }
+
+        <div class="table-wrapper" [class.table-loading]="loading() && categorias().length > 0">
+          <table class="data-table" aria-label="Categorías registradas">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th class="text-right">ID</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (loading() && categorias().length === 0) {
+                @for (s of [1, 2, 3, 4, 5]; track s) {
+                  <tr>
+                    <td><div class="skeleton" style="width: 140px; height: 16px;"></div></td>
+                    <td><div class="skeleton" style="width: 180px; height: 16px;"></div></td>
+                    <td class="text-right"><div class="skeleton" style="width: 30px; height: 16px; margin-left: auto;"></div></td>
+                    <td><div class="skeleton" style="width: 60px; height: 20px;"></div></td>
+                  </tr>
+                }
+              } @else if (categorias().length === 0) {
+                <tr>
+                  <td colspan="4">
+                    <div class="empty-state">
+                      <p class="empty-state__description">
+                        No se encontraron categorías con los filtros seleccionados.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              } @else {
+                @for (cat of categorias(); track cat.id) {
+                  <tr [class.row-inactive]="!cat.activo">
+                    <td>{{ cat.nombre }}</td>
+                    <td class="cell-desc">{{ cat.descripcion || '—' }}</td>
+                    <td class="text-right font-mono">{{ cat.id }}</td>
+                    <td>
+                      <app-badge [variant]="cat.activo ? 'neutral' : 'danger'" size="sm">
+                        {{ cat.activo ? 'Activa' : 'Inactiva' }}
+                      </app-badge>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <app-pagination
+          [page]="currentPage()"
+          [size]="pageSize()"
+          [totalElements]="totalElements()"
+          [totalPages]="totalPages()"
+          (pageChange)="onPageChange($event)"
+        />
+      </div>
+    </div>

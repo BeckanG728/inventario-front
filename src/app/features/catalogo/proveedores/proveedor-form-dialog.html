@@ -1,0 +1,137 @@
+    <app-modal
+      [title]="isEdit() ? 'Modificar proveedor' : 'Registrar nuevo proveedor'"
+      size="md"
+      [(isOpen)]="isOpen"
+      (closed)="onCancel()"
+    >
+      @if (generalError()) {
+        <div class="inline-alert inline-alert--error form-alert" role="alert">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="8"></line>
+            <line x1="12" y1="12" x2="12" y2="16"></line>
+          </svg>
+          <span>{{ generalError() }}</span>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <app-field
+          label="Razón social de la empresa"
+          forId="razonSocial"
+          [required]="true"
+          hint="Nombre legal o comercial de la empresa distribuidora (máx. 150 caracteres)"
+          [error]="razonSocialError()"
+        >
+          <input
+            id="razonSocial"
+            type="text"
+            formControlName="razonSocial"
+            autocomplete="organization"
+            placeholder="Ej. Repuestos Andinos S.A."
+            [attr.aria-invalid]="!!razonSocialError()"
+          />
+        </app-field>
+
+        <app-field
+          label="Número de RUC"
+          forId="ruc"
+          [required]="true"
+          hint="Identificador tributario único (máx. 20 caracteres)"
+          [error]="rucError()"
+        >
+          <input
+            id="ruc"
+            type="text"
+            inputmode="numeric"
+            maxlength="20"
+            formControlName="ruc"
+            autocomplete="off"
+            placeholder="Ej. 1792345678001"
+            [attr.aria-invalid]="!!rucError()"
+          />
+        </app-field>
+
+        <app-field
+          label="Persona de contacto (opcional)"
+          forId="contacto"
+          hint="Nombre del asesor comercial o ejecutivo de ventas"
+          [error]="contactoError()"
+        >
+          <input
+            id="contacto"
+            type="text"
+            formControlName="contacto"
+            autocomplete="name"
+            placeholder="Ej. María López"
+          />
+        </app-field>
+
+        <div class="form-row">
+          <app-field
+            label="Teléfono (opcional)"
+            forId="telefono"
+            hint="Número telefónico de pedidos"
+            [error]="telefonoError()"
+          >
+            <input
+              id="telefono"
+              type="tel"
+              formControlName="telefono"
+              autocomplete="tel"
+              placeholder="Ej. 0998765432"
+            />
+          </app-field>
+
+          <app-field
+            label="Correo electrónico (opcional)"
+            forId="correo"
+            hint="Email de cotizaciones o facturas"
+            [error]="correoError()"
+          >
+            <input
+              id="correo"
+              type="email"
+              formControlName="correo"
+              autocomplete="email"
+              placeholder="Ej. ventas@repuestosandinos.com"
+              [attr.aria-invalid]="!!correoError()"
+            />
+          </app-field>
+        </div>
+
+        <app-field
+          label="Dirección fiscal / almacén (opcional)"
+          forId="direccion"
+          hint="Dirección física o sede del proveedor"
+          [error]="direccionError()"
+        >
+          <input
+            id="direccion"
+            type="text"
+            formControlName="direccion"
+            autocomplete="street-address"
+            placeholder="Ej. Av. Amazonas 123"
+          />
+        </app-field>
+      </form>
+
+      <div modal-footer class="dialog-actions">
+        <app-button
+          variant="secondary"
+          [disabled]="submitting()"
+          (btnClick)="onCancel()"
+        >
+          Cancelar
+        </app-button>
+
+        <app-button
+          type="submit"
+          variant="primary"
+          [loading]="submitting()"
+          (btnClick)="onSubmit()"
+        >
+          {{ isEdit() ? 'Guardar cambios' : 'Crear proveedor' }}
+        </app-button>
+      </div>
+    </app-modal>

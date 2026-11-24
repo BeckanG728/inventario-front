@@ -1,0 +1,106 @@
+
+    .filter-panel {
+      margin-bottom: var(--space-5);
+    }
+
+    .filter-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      align-items: flex-end;
+    }
+
+    .filter-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      flex: 1;
+      min-width: 170px;
+    }
+
+    .filter-field label {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+
+    .filter-input {
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-body);
+      color: var(--color-text-primary);
+      background: var(--color-surface);
+      outline: none;
+      min-height: 40px;
+    }
+
+    .filter-input:focus-visible {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-focus-ring);
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: var(--space-2);
+      align-items: center;
+    }
+
+    .summary-grid {
+      margin-bottom: var(--space-5);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--font-size-body);
+    }
+
+    .data-table th, .data-table td {
+      padding: var(--space-2) var(--space-3);
+      text-align: left;
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--font-size-label);
+    }
+
+    .data-table th {
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--color-surface-raised);
+    }
+
+    .data-table tbody tr:hover {
+      background: var(--color-surface-raised);
+    }
+
+    .empty-cell {
+      padding: var(--space-8) var(--space-4);
+    }
+
+    .td-motivo {
+      max-width: 180px;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+
+    .variacion-line {
+      display: block;
+      line-height: 1.5;
+    }
+
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .font-mono { font-family: var(--font-mono); }
+    .font-sm { font-size: var(--font-size-sm); }
+    .font-weight-bold { font-weight: 700; }
+    .text-muted { color: var(--color-text-muted); }
+    .text-success { color: var(--color-success); }
+    .text-danger { color: var(--color-danger); }
+
+    .alert-box {
+      margin-bottom: var(--space-5);
+    }
+  

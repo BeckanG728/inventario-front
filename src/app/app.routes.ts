@@ -46,7 +46,7 @@ export const routes: Routes = [
       {
         path: 'catalogo',
         canActivate: [roleGuard],
-        data: { roles: ['JEFE_TALLER', 'MECANICO'], breadcrumb: 'Catálogo' },
+        data: { roles: ['JEFE_TALLER'], breadcrumb: 'Catálogo' },
         loadChildren: () => import('@features/catalogo/catalogo.routes').then(m => m.CATALOGO_ROUTES)
       },
       {

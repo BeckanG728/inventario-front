@@ -1,0 +1,185 @@
+
+    <app-page-header
+      title="Movimientos de Inventario"
+      subtitle="Auditoría cronológica de entradas por compra, consumos de mecánicos y ajustes físicos"
+    >
+    </app-page-header>
+
+    <app-pill-nav [items]="navItems" ariaLabel="Reportes del sistema" />
+
+    <!-- Filtros de búsqueda -->
+    <div class="data-panel filter-panel">
+      <form class="filter-form" (ngSubmit)="onFiltrar()">
+        <div class="filter-field">
+          <label for="fecha-desde">Fecha desde</label>
+          <input
+            id="fecha-desde"
+            type="date"
+            class="filter-input"
+            [ngModel]="desde()"
+            (ngModelChange)="desde.set($event)"
+            name="desde"
+            required
+          />
+        </div>
+
+        <div class="filter-field">
+          <label for="fecha-hasta">Fecha hasta</label>
+          <input
+            id="fecha-hasta"
+            type="date"
+            class="filter-input"
+            [ngModel]="hasta()"
+            (ngModelChange)="hasta.set($event)"
+            name="hasta"
+            required
+          />
+        </div>
+
+        <div class="filter-field">
+          <label for="filtro-tipo">Tipo de movimiento</label>
+          <select
+            id="filtro-tipo"
+            class="filter-input"
+            [ngModel]="tipo()"
+            (ngModelChange)="tipo.set($event)"
+            name="tipo"
+          >
+            <option value="">Todos los tipos</option>
+            <option value="ENTRADA">Entradas (Compras)</option>
+            <option value="CONSUMO">Consumos</option>
+            <option value="AJUSTE">Ajustes físicos</option>
+          </select>
+        </div>
+
+        <div class="filter-actions">
+          <app-button
+            type="submit"
+            variant="primary"
+            [loading]="cargando()"
+          >
+            Filtrar
+          </app-button>
+          <app-button
+            type="button"
+            variant="outline"
+            (btnClick)="resetFiltros()"
+          >
+            Mes actual
+          </app-button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Error -->
+    @if (errorMensaje()) {
+      <div class="inline-alert inline-alert--error alert-box" role="alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="8"/>
+          <line x1="12" y1="12" x2="12" y2="16"/>
+        </svg>
+        <span>{{ errorMensaje() }}</span>
+      </div>
+    }
+
+    <!-- Totales globales (calculados sobre el filtro completo) -->
+    @if (data(); as d) {
+      <div class="stat-grid summary-grid">
+        <div class="stat-card-mini stat-card-mini--blue">
+          <span class="label">Total Movimientos</span>
+          <span class="value">{{ d.totalElements }}</span>
+        </div>
+        <div class="stat-card-mini stat-card-mini--green">
+          <span class="label">Entradas</span>
+          <span class="value">{{ d.totalEntradas }}</span>
+        </div>
+        <div class="stat-card-mini stat-card-mini--purple">
+          <span class="label">Consumos</span>
+          <span class="value">{{ d.totalConsumos }}</span>
+        </div>
+        <div class="stat-card-mini stat-card-mini--orange">
+          <span class="label">Ajustes</span>
+          <span class="value">{{ d.totalAjustes }}</span>
+        </div>
+      </div>
+
+      <!-- Tabla de resultados -->
+      <div class="data-panel">
+        <div class="table-wrapper">
+          <table class="data-table" aria-label="Listado de movimientos">
+            <thead>
+              <tr>
+                <th scope="col">Fecha / Hora</th>
+                <th scope="col">Producto</th>
+                <th scope="col">Tipo</th>
+                <th scope="col" class="text-right">Cantidad</th>
+                <th scope="col">Variación stock</th>
+                <th scope="col" class="text-right">C/U</th>
+                <th scope="col">Motivo / Detalle</th>
+                <th scope="col">Usuario</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of d.movimientos; track m.id) {
+                <tr>
+                  <td class="font-mono font-sm">{{ m.fecha | appDateTime }}</td>
+                  <td class="font-mono font-sm">{{ m.productoCodigo || '—' }}</td>
+                  <td>
+                    @switch (m.tipo) {
+                      @case ('ENTRADA') {
+                        <app-badge variant="success" size="sm">Entrada</app-badge>
+                      }
+                      @case ('CONSUMO') {
+                        <app-badge variant="accent" size="sm">Consumo</app-badge>
+                      }
+                      @case ('AJUSTE') {
+                        <app-badge variant="info" size="sm">Ajuste</app-badge>
+                      }
+                    }
+                  </td>
+                  <td class="text-right font-weight-bold">
+                    @if (m.tipo === 'AJUSTE') {
+                      <span [class.text-danger]="(m.variacion ?? 0) < 0" [class.text-success]="(m.variacion ?? 0) > 0">
+                        {{ (m.variacion ?? 0) >= 0 ? '+' : '' }}{{ m.variacion }}
+                      </span>
+                    } @else {
+                      {{ m.cantidad }}
+                    }
+                  </td>
+                  <td class="font-mono font-sm">
+                    <span class="variacion-line">previo: {{ m.stockAnterior }}</span>
+                    <span class="variacion-line text-muted">posterior: {{ m.stockPosterior }}</span>
+                  </td>
+                  <td class="text-right font-mono font-sm">
+                    @if (m.costoUnitario !== null) {
+                      {{ m.costoUnitario | appCurrency }}
+                    } @else {
+                      <span class="text-muted">—</span>
+                    }
+                  </td>
+                  <td class="td-motivo" [title]="m.motivo">{{ m.motivo }}</td>
+                  <td class="font-sm">{{ m.usuarioUsername || '—' }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="8" class="text-center text-muted empty-cell">
+                    No se encontraron movimientos para el rango y filtros seleccionados.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginación -->
+        <app-pagination
+          [page]="d.page"
+          [size]="d.size"
+          [totalElements]="d.totalElements"
+          [totalPages]="d.totalPages"
+          (pageChange)="onPageChange($event)"
+        />
+      </div>
+    }
+  

@@ -12,474 +12,156 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { EstadisticasApi } from '@core/api/estadisticas/estadisticas-api';
 import {
-  EstadisticasParams,
-  EstadisticasResponse,
+  EstadisticasTipoPunto,
   Granularidad
 } from '@core/api/estadisticas/estadisticas.models';
 import { parseApiError } from '@core/api/api-error';
-import { formatDate, getLimaMonthRange } from '@shared/format/date.util';
+import { getLimaTodayString } from '@shared/format/date.util';
 import { PageHeader } from '@shared/ui/page-header/page-header';
 import { PillNav } from '@shared/ui/pill-nav/pill-nav';
 import { Button } from '@shared/ui/button/button';
-import { NumberPipe } from '@shared/format/number.pipe';
+import { CurrencyPipe } from '@shared/format/currency.pipe';
+import { formatCurrency } from '@shared/format/number.util';
 import { REPORTES_NAV_ITEMS } from '../reportes-nav';
+
+type GranularidadUi = Granularidad | 'AUTO';
+type SerieKey = 'entrada' | 'salida';
 
 interface ItemEstadistica {
   fecha: string;
   label: string;
-  cantidad: number;
-  porcentaje: number;
+  /** Unidades: se conservan para detectar períodos con actividad. */
+  entrada: number;
+  salida: number;
+  ajuste: number;
+  /** Costos del período, en soles. Solo se usan entradas y salidas. */
+  costoEntrada: number;
+  costoSalida: number;
+}
+
+/** Meses máximos del rango por granularidad (deben coincidir con el backend). */
+const MESES_MAX: Record<Granularidad, number> = { DAY: 12, WEEK: 24, MONTH: 60 };
+const MESES_MAX_TEXTO: Record<Granularidad, string> = {
+  DAY: '12 meses',
+  WEEK: '24 meses',
+  MONTH: '60 meses'
+};
+const GRAN_NOMBRE: Record<Granularidad, string> = { DAY: 'Día', WEEK: 'Semana', MONTH: 'Mes' };
+const GRAN_LABEL: Record<Granularidad, string> = { DAY: 'día', WEEK: 'semana', MONTH: 'mes' };
+const AUTO_MAX_DIAS_DAY = 31;
+const AUTO_MAX_DIAS_WEEK = 182;
+
+/** Períodos visibles al inicio y ampliación al pedir anteriores. */
+const VENTANA_INICIAL: Record<Granularidad, number> = { DAY: 30, WEEK: 12, MONTH: 12 };
+const AMPLIACION_VENTANA = 2;
+/** A partir de este número de períodos se ocultan marcadores y la tabla arranca colapsada. */
+const UMBRAL_DETALLE = 31;
+
+// Geometría del gráfico (viewBox 800 x 290)
+const LEFT = 72;
+const RIGHT = 772;
+const TOP = 30;
+const BOTTOM = 220;
+
+/** Dos series diferenciadas por trazo y forma de marcador, sin hexadecimales. */
+const SERIES_CONFIG: {
+  key: SerieKey;
+  label: string;
+  color: string;
+  dash: string;
+  marker: 'circle' | 'square';
+}[] = [
+  { key: 'entrada', label: 'Costo que entra', color: 'var(--color-success)', dash: '', marker: 'circle' },
+  { key: 'salida', label: 'Costo que sale', color: 'var(--color-primary)', dash: '6 4', marker: 'square' }
+];
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+/** Suma meses a una fecha yyyy-MM-dd recortando el día al último del mes (como java.time). */
+function addMonthsIso(iso: string, meses: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const total = (m - 1) + meses;
+  const ny = y + Math.floor(total / 12);
+  const nm = ((total % 12) + 12) % 12;
+  const ultimo = new Date(ny, nm + 1, 0).getDate();
+  return `${ny}-${pad(nm + 1)}-${pad(Math.min(d, ultimo))}`;
+}
+
+function addDaysIso(iso: string, dias: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + dias);
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+}
+
+/** Mes actual en Lima: del día 1 hasta hoy, sin fechas futuras. */
+function getRangoMesActual(): { desde: string; hasta: string } {
+  const hoy = getLimaTodayString();
+  return { desde: `${hoy.slice(0, 7)}-01`, hasta: hoy };
+}
+
+function limitarAHoy(iso: string): string {
+  const hoy = getLimaTodayString();
+  return iso > hoy ? hoy : iso;
+}
+
+/** Última fecha "hasta" permitida para un "desde" y una granularidad. */
+function maxHasta(from: string, gran: Granularidad): string {
+  return addDaysIso(addMonthsIso(from, MESES_MAX[gran]), -1);
+}
+
+/** Días (inclusive) entre dos fechas yyyy-MM-dd. */
+function diasEntre(from: string, to: string): number {
+  const [y1, m1, d1] = from.split('-').map(Number);
+  const [y2, m2, d2] = to.split('-').map(Number);
+  return Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y1, m1 - 1, d1)) / 86400000) + 1;
+}
+
+/** Granularidad automática según el número de días consultados. */
+function granularidadAuto(from: string, to: string): Granularidad {
+  if (!from || !to || to < from) return 'DAY';
+  const dias = diasEntre(from, to);
+  if (dias <= AUTO_MAX_DIAS_DAY) return 'DAY';
+  if (dias <= AUTO_MAX_DIAS_WEEK) return 'WEEK';
+  return 'MONTH';
+}
+
+/** Tope "redondo" del eje Y con 4 intervalos enteros. */
+function maximoEje(max: number): number {
+  const crudo = Math.max(1, Math.ceil(max / 4));
+  const magnitud = Math.pow(10, Math.floor(Math.log10(crudo)));
+  const base = crudo / magnitud;
+  const candidatos = [1, 2, 3, 4, 5, 6, 8, 10];
+  const mult = candidatos.find(c => c >= base) ?? 10;
+  return mult * magnitud * 4;
+}
+
+function xAt(i: number, n: number): number {
+  return n <= 1 ? (LEFT + RIGHT) / 2 : LEFT + (i * (RIGHT - LEFT)) / (n - 1);
+}
+
+function yAt(v: number, max: number): number {
+  return BOTTOM - (v / max) * (BOTTOM - TOP);
+}
+
+/** Etiquetas del eje Y: moneda sin decimales. */
+function formatoEje(n: number): string {
+  return formatCurrency(n, 0);
+}
+
+/** Montos del tooltip: moneda con dos decimales. */
+function formatoMonto(n: number): string {
+  return formatCurrency(n);
 }
 
 @Component({
   selector: 'app-estadisticas-page',
   standalone: true,
-  imports: [
-    FormsModule,
-    PageHeader,
-    PillNav,
-    Button,
-    NumberPipe
-  ],
+  imports: [FormsModule, PageHeader, PillNav, Button, CurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <app-page-header
-      title="Estadísticas de Actividad de Inventario"
-      subtitle="Distribución temporal de movimientos registrados por día, semana o mes"
-    />
-
-    <app-pill-nav [items]="navItems" ariaLabel="Reportes del sistema" />
-
-    <!-- Panel de filtros -->
-    <div class="data-panel filter-panel">
-      <form class="filter-form" (ngSubmit)="cargar()">
-        <div class="filter-field">
-          <label for="stat-from">Fecha desde</label>
-          <input
-            id="stat-from"
-            type="date"
-            class="filter-input"
-            [ngModel]="from()"
-            (ngModelChange)="from.set($event)"
-            name="from"
-            required
-          />
-        </div>
-
-        <div class="filter-field">
-          <label for="stat-to">Fecha hasta</label>
-          <input
-            id="stat-to"
-            type="date"
-            class="filter-input"
-            [ngModel]="to()"
-            (ngModelChange)="to.set($event)"
-            name="to"
-            required
-          />
-        </div>
-
-        <div class="filter-field">
-          <label id="gran-label">Granularidad</label>
-          <div class="granularity-toggle" role="radiogroup" aria-labelledby="gran-label">
-            <button
-              type="button"
-              class="gran-btn"
-              [class.gran-btn--active]="granularity() === 'DAY'"
-              (click)="setGranularity('DAY')"
-              role="radio"
-              [attr.aria-checked]="granularity() === 'DAY'"
-            >
-              Día
-            </button>
-            <button
-              type="button"
-              class="gran-btn"
-              [class.gran-btn--active]="granularity() === 'WEEK'"
-              (click)="setGranularity('WEEK')"
-              role="radio"
-              [attr.aria-checked]="granularity() === 'WEEK'"
-            >
-              Semana
-            </button>
-            <button
-              type="button"
-              class="gran-btn"
-              [class.gran-btn--active]="granularity() === 'MONTH'"
-              (click)="setGranularity('MONTH')"
-              role="radio"
-              [attr.aria-checked]="granularity() === 'MONTH'"
-            >
-              Mes
-            </button>
-          </div>
-        </div>
-
-        <div class="filter-actions">
-          <app-button
-            type="submit"
-            variant="primary"
-            [loading]="cargando()"
-          >
-            Actualizar gráfico
-          </app-button>
-          <app-button
-            type="button"
-            variant="outline"
-            (btnClick)="resetFiltros()"
-          >
-            Mes actual
-          </app-button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Error -->
-    @if (errorMensaje()) {
-      <div class="inline-alert inline-alert--error alert-box" role="alert">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="8"/>
-          <line x1="12" y1="12" x2="12" y2="16"/>
-        </svg>
-        <span>{{ errorMensaje() }}</span>
-      </div>
-    }
-
-    <!-- KPIs de actividad -->
-    @if (!cargando() && items().length > 0) {
-      <div class="stat-grid summary-grid">
-        <div class="stat-card-mini stat-card-mini--blue">
-          <span class="label">Total Movimientos</span>
-          <span class="value">{{ totalMovimientos() | appNumber }}</span>
-        </div>
-        <div class="stat-card-mini stat-card-mini--teal">
-          <span class="label">Períodos con Actividad</span>
-          <span class="value">{{ items().length }}</span>
-        </div>
-        <div class="stat-card-mini stat-card-mini--purple">
-          <span class="label">Pico Máximo</span>
-          <span class="value">{{ maxCantidad() }} mov.</span>
-        </div>
-        <div class="stat-card-mini stat-card-mini--green">
-          <span class="label">Promedio por Período</span>
-          <span class="value">{{ promedio() }}</span>
-        </div>
-      </div>
-
-      <!-- Gráfico SVG Puro -->
-      <div class="data-panel chart-panel">
-        <div class="panel-head">
-          <h2>Tendencia de movimientos</h2>
-          <span class="panel-hint">Distribución por {{ granularidadLabel() }}</span>
-        </div>
-
-        <div class="svg-container" role="img" aria-label="Gráfico de barras de movimientos por fecha">
-          <svg
-            viewBox="0 0 800 320"
-            class="chart-svg"
-            preserveAspectRatio="xMidYMid meet"
-          >
-            <!-- Líneas guía horizontales -->
-            <line x1="60" y1="40" x2="780" y2="40" class="grid-line" />
-            <text x="50" y="44" class="axis-label">{{ maxCantidad() }}</text>
-
-            <line x1="60" y1="130" x2="780" y2="130" class="grid-line" />
-            <text x="50" y="134" class="axis-label">{{ Math.round(maxCantidad() / 2) }}</text>
-
-            <line x1="60" y1="220" x2="780" y2="220" class="grid-line" />
-            <text x="50" y="224" class="axis-label">0</text>
-
-            <!-- Eje base -->
-            <line x1="60" y1="220" x2="780" y2="220" class="axis-base" />
-
-            <!-- Barras -->
-            @for (bar of chartBars(); track bar.fecha) {
-              <g class="bar-group" tabindex="0">
-                <title>{{ bar.label }}: {{ bar.cantidad }} movimientos</title>
-                <rect
-                  [attr.x]="bar.x"
-                  [attr.y]="bar.y"
-                  [attr.width]="bar.width"
-                  [attr.height]="bar.height"
-                  class="chart-bar"
-                  rx="4"
-                />
-                <!-- Valor sobre la barra si cabe -->
-                @if (bar.height > 16) {
-                  <text
-                    [attr.x]="bar.x + bar.width / 2"
-                    [attr.y]="bar.y - 6"
-                    class="bar-val-label"
-                  >
-                    {{ bar.cantidad }}
-                  </text>
-                }
-                <!-- Label en eje X -->
-                <text
-                  [attr.x]="bar.x + bar.width / 2"
-                  y="245"
-                  class="bar-x-label"
-                  [attr.transform]="bar.xLabelTransform"
-                >
-                  {{ bar.label }}
-                </text>
-              </g>
-            }
-          </svg>
-        </div>
-      </div>
-
-      <!-- Tabla complementaria -->
-      <div class="data-panel">
-        <div class="panel-head">
-          <h2>Detalle de movimientos por período</h2>
-        </div>
-
-        <div class="table-wrapper">
-          <table class="data-table" aria-label="Detalle por período">
-            <thead>
-              <tr>
-                <th scope="col">Período</th>
-                <th scope="col" class="text-right">Movimientos</th>
-                <th scope="col" style="width: 45%;">Distribución</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of items(); track item.fecha) {
-                <tr>
-                  <td class="font-weight-500 font-mono">{{ item.label }}</td>
-                  <td class="text-right font-weight-bold font-lg text-primary">
-                    {{ item.cantidad }}
-                  </td>
-                  <td>
-                    <div class="progress-track" [attr.aria-valuenow]="item.porcentaje">
-                      <div
-                        class="progress-fill"
-                        [style.width.%]="item.porcentaje"
-                      ></div>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>
-    } @else if (!cargando() && !errorMensaje()) {
-      <div class="data-panel empty-panel">
-        <div class="empty-state">
-          <h2>Sin movimientos registrados</h2>
-          <p>No se encontraron movimientos en el rango de fechas seleccionado.</p>
-        </div>
-      </div>
-    }
-  `,
-  styles: [`
-    .filter-panel {
-      margin-bottom: var(--space-5);
-    }
-
-    .filter-form {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--space-3);
-      align-items: flex-end;
-    }
-
-    .filter-field {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-1);
-      flex: 1;
-      min-width: 170px;
-    }
-
-    .filter-field label {
-      font-size: var(--font-size-sm);
-      font-weight: 600;
-      color: var(--color-text-secondary);
-    }
-
-    .filter-input {
-      padding: var(--space-2) var(--space-3);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      font-size: var(--font-size-body);
-      color: var(--color-text-primary);
-      background: var(--color-surface);
-      outline: none;
-      min-height: 40px;
-    }
-
-    .filter-input:focus-visible {
-      border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px var(--color-focus-ring);
-    }
-
-    .granularity-toggle {
-      display: inline-flex;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      min-height: 40px;
-      background: var(--color-surface);
-    }
-
-    .gran-btn {
-      padding: 0 var(--space-3);
-      border: none;
-      background: transparent;
-      font-size: var(--font-size-sm);
-      font-weight: 600;
-      color: var(--color-text-secondary);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .gran-btn:hover:not(.gran-btn--active) {
-      background: var(--color-surface-hover);
-      color: var(--color-text-primary);
-    }
-
-    .gran-btn--active {
-      background: var(--color-primary);
-      color: var(--color-on-color);
-    }
-
-    .gran-btn:focus-visible {
-      outline: 2px solid var(--color-focus-ring);
-      outline-offset: -2px;
-    }
-
-    .filter-actions {
-      display: flex;
-      gap: var(--space-2);
-      align-items: center;
-    }
-
-    .summary-grid {
-      margin-bottom: var(--space-5);
-    }
-
-    .chart-panel {
-      margin-bottom: var(--space-5);
-    }
-
-    .svg-container {
-      width: 100%;
-      overflow-x: auto;
-      padding: var(--space-2) 0;
-    }
-
-    .chart-svg {
-      width: 100%;
-      height: auto;
-      max-height: 380px;
-    }
-
-    .grid-line {
-      stroke: var(--color-border);
-      stroke-dasharray: 4 4;
-      stroke-width: 1;
-    }
-
-    .axis-base {
-      stroke: var(--color-border-strong, var(--color-border));
-      stroke-width: 1.5;
-    }
-
-    .axis-label {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      fill: var(--color-text-muted);
-      text-anchor: end;
-    }
-
-    .chart-bar {
-      fill: var(--color-primary);
-      transition: fill 0.15s, transform 0.15s;
-      cursor: pointer;
-    }
-
-    .bar-group:hover .chart-bar,
-    .bar-group:focus-visible .chart-bar {
-      fill: var(--color-primary-hover);
-      filter: brightness(1.1);
-    }
-
-    .bar-val-label {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      fill: var(--color-text-primary);
-      text-anchor: middle;
-    }
-
-    .bar-x-label {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      fill: var(--color-text-secondary);
-      text-anchor: middle;
-    }
-
-    /* Tabla y barras de progreso */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: var(--font-size-body);
-    }
-
-    .data-table th, .data-table td {
-      padding: var(--space-3) var(--space-4);
-      text-align: left;
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    .data-table th {
-      font-weight: 600;
-      color: var(--color-text-secondary);
-      font-size: var(--font-size-sm);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      background: var(--color-surface-raised);
-    }
-
-    .progress-track {
-      height: 12px;
-      background: var(--color-surface-raised);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-full);
-      overflow: hidden;
-      width: 100%;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: var(--color-primary);
-      border-radius: var(--radius-full);
-      transition: width 0.3s ease;
-    }
-
-    .text-right { text-align: right; }
-    .font-mono { font-family: var(--font-mono); }
-    .font-lg { font-size: 1rem; }
-    .font-weight-500 { font-weight: 500; }
-    .font-weight-bold { font-weight: 700; }
-    .text-primary { color: var(--color-primary); }
-
-    .empty-panel {
-      text-align: center;
-    }
-
-    .empty-state {
-      padding: var(--space-10) var(--space-6);
-    }
-
-    .alert-box {
-      margin-bottom: var(--space-5);
-    }
-  `]
+  templateUrl: './estadisticas-page.html',
+  styleUrl: './estadisticas-page.css'
 })
 export class EstadisticasPage implements OnInit {
   protected readonly Math = Math;
@@ -492,167 +174,305 @@ export class EstadisticasPage implements OnInit {
 
   readonly from = signal('');
   readonly to = signal('');
-  readonly granularity = signal<Granularidad>('DAY');
+  readonly granularity = signal<GranularidadUi>('AUTO');
+  readonly avisoAjuste = signal('');
 
-  readonly rawData = signal<EstadisticasResponse>({});
+  readonly puntos = signal<EstadisticasTipoPunto[]>([]);
+  /** Granularidad con la que se pidieron los datos actuales (para las etiquetas). */
+  private readonly dataGranularity = signal<Granularidad>('DAY');
   readonly cargando = signal(false);
   readonly errorMensaje = signal('');
 
-  // Items ordenados cronológicamente
-  readonly items = computed<ItemEstadistica[]>(() => {
-    const raw = this.rawData();
-    const keys = Object.keys(raw).sort();
-    if (!keys.length) return [];
+  /** Contador de peticiones: descarta respuestas de rangos ya abandonados. */
+  private reqGrafico = 0;
 
-    let max = 0;
-    for (const k of keys) {
-      if (raw[k] > max) max = raw[k];
-    }
-    const maxVal = max > 0 ? max : 1;
+  // Interacción del gráfico
+  readonly hoverIdx = signal<number | null>(null);
+  readonly ventana = signal<number>(VENTANA_INICIAL.DAY);
+  private readonly tablaManual = signal<boolean | null>(null);
+  readonly seriesConfig = SERIES_CONFIG;
 
-    return keys.map(k => ({
-      fecha: k,
-      label: this.formatLabel(k, this.granularity()),
-      cantidad: raw[k],
-      porcentaje: Math.round((raw[k] / maxVal) * 100)
-    }));
-  });
-
-  readonly totalMovimientos = computed(() =>
-    this.items().reduce((sum, item) => sum + item.cantidad, 0)
+  // ── Validación del rango ──────────────────────────────────────────────────
+  /** En automático aplica el tope más amplio (mes). */
+  private readonly granLimite = computed<Granularidad>(() =>
+    this.granularity() === 'AUTO' ? 'MONTH' : (this.granularity() as Granularidad)
   );
 
-  readonly maxCantidad = computed(() => {
-    const it = this.items();
-    if (!it.length) return 1;
-    const m = Math.max(...it.map(i => i.cantidad));
-    return m > 0 ? m : 1;
+  /** Granularidad efectiva enviada a la API. */
+  readonly granEfectiva = computed<Granularidad>(() => {
+    const g = this.granularity();
+    return g === 'AUTO' ? granularidadAuto(this.from(), this.to()) : g;
   });
 
-  readonly promedio = computed(() => {
-    const it = this.items();
-    if (!it.length) return '0';
-    return (this.totalMovimientos() / it.length).toFixed(1);
+  readonly granularidadLabel = computed(() => GRAN_LABEL[this.dataGranularity()]);
+  readonly mesesMaxTexto = computed(() => MESES_MAX_TEXTO[this.granLimite()]);
+
+  readonly rangoHint = computed(() =>
+    this.granularity() === 'AUTO'
+      ? `Rango máximo: ${this.mesesMaxTexto()}. La granularidad (${GRAN_NOMBRE[this.granEfectiva()]} para este rango) se elige según los días consultados.`
+      : `Rango máximo con granularidad ${GRAN_NOMBRE[this.granLimite()]}: ${this.mesesMaxTexto()}.`
+  );
+
+  readonly maxHastaPermitido = computed(() => {
+    const from = this.from();
+    return from ? limitarAHoy(maxHasta(from, this.granLimite())) : null;
   });
 
-  readonly granularidadLabel = computed(() => {
-    switch (this.granularity()) {
-      case 'DAY': return 'día';
-      case 'WEEK': return 'semana';
-      case 'MONTH': return 'mes';
+  readonly rangoError = computed(() => {
+    const from = this.from();
+    const to = this.to();
+    if (!from || !to) return 'Selecciona ambas fechas.';
+    if (to < from) return 'La fecha final no puede ser anterior a la inicial.';
+    if (to > maxHasta(from, this.granLimite())) {
+      return this.granularity() === 'AUTO'
+        ? `El rango no puede superar ${this.mesesMaxTexto()}.`
+        : `Con granularidad ${GRAN_NOMBRE[this.granLimite()]} el rango no puede superar ${this.mesesMaxTexto()}.`;
     }
+    return '';
   });
 
-  // Cálculo de coordenadas SVG para las barras
-  readonly chartBars = computed(() => {
+  // ── Datos derivados ───────────────────────────────────────────────────────
+  readonly items = computed<ItemEstadistica[]>(() =>
+    this.puntos().map(p => ({
+      fecha: p.fecha,
+      label: this.formatLabel(p.fecha, this.dataGranularity()),
+      entrada: p.entrada,
+      salida: p.consumo,
+      ajuste: p.ajuste,
+      costoEntrada: p.costoEntradas ?? 0,
+      costoSalida: p.costoConsumos ?? 0
+    }))
+  );
+
+  readonly totalCostoEntradas = computed(() => this.items().reduce((s, i) => s + i.costoEntrada, 0));
+  readonly totalCostoSalidas = computed(() => this.items().reduce((s, i) => s + i.costoSalida, 0));
+
+  readonly hayDatos = computed(() => this.items().some(i =>
+    i.entrada + i.salida + i.ajuste > 0 || i.costoEntrada + i.costoSalida > 0
+  ));
+  readonly periodosActivos = computed(() => this.items().filter(i =>
+    i.entrada + i.salida + i.ajuste > 0
+  ).length);
+
+  /** Ventana deslizante: solo los períodos más recientes. */
+  readonly visibleItems = computed(() => {
     const items = this.items();
-    if (!items.length) return [];
+    const v = this.ventana();
+    return items.length <= v ? items : items.slice(items.length - v);
+  });
+  readonly hayAnteriores = computed(() => this.items().length > this.visibleItems().length);
+  readonly tablaVisible = computed(() => this.tablaManual() ?? this.items().length <= UMBRAL_DETALLE);
 
-    const chartWidth = 720; // 780 - 60
-    const startX = 60;
-    const baseY = 220;
-    const maxHeight = 180; // 220 - 40
-    const max = this.maxCantidad();
+  readonly chartAria = computed(() =>
+    `Gráfico de líneas de costos por ${this.granularidadLabel()}. Costo de entradas ${formatCurrency(this.totalCostoEntradas())} y de salidas ${formatCurrency(this.totalCostoSalidas())} en ${this.items().length} períodos.`
+  );
 
+  private valorSerie(item: ItemEstadistica, key: SerieKey): number {
+    return key === 'entrada' ? item.costoEntrada : item.costoSalida;
+  }
+
+  /** Geometría del gráfico de líneas: ejes, dos series, etiquetas y zonas de hover. */
+  readonly chart = computed(() => {
+    const items = this.visibleItems();
     const n = items.length;
-    const slotWidth = chartWidth / n;
-    const barWidth = Math.min(Math.max(slotWidth * 0.65, 8), 44);
+    const maxDato = items.reduce(
+      (m, it) => Math.max(m, this.valorSerie(it, 'entrada'), this.valorSerie(it, 'salida')),
+      0
+    );
+    const max = maximoEje(maxDato);
 
-    return items.map((item, idx) => {
-      const x = startX + idx * slotWidth + (slotWidth - barWidth) / 2;
-      const height = Math.max(Math.round((item.cantidad / max) * maxHeight), 2);
-      const y = baseY - height;
+    const ticks = [0, 1, 2, 3, 4].map(k => {
+      const valor = (max / 4) * k;
+      return { valor, texto: formatoEje(valor), y: yAt(valor, max) };
+    });
 
-      // Si hay más de 12 elementos, rotar ligeramente el label
-      const xLabelTransform = n > 12
-        ? `rotate(-40, ${x + barWidth / 2}, 245)`
-        : '';
-
+    const series = SERIES_CONFIG.map(s => {
+      const circles = items.map((it, i) => ({ x: xAt(i, n), y: yAt(this.valorSerie(it, s.key), max) }));
       return {
-        fecha: item.fecha,
-        label: item.label,
-        cantidad: item.cantidad,
-        x,
-        y,
-        width: barWidth,
-        height,
-        xLabelTransform
+        key: s.key,
+        color: s.color,
+        dash: s.dash,
+        marker: s.marker,
+        points: circles.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' '),
+        circles
       };
     });
+
+    const maxEtiquetas = this.dataGranularity() === 'WEEK' ? 10 : 14;
+    const paso = Math.max(1, Math.ceil(n / maxEtiquetas));
+    const xLabels = items
+      .map((it, i) => ({ i, x: xAt(i, n), label: it.label }))
+      .filter(l => l.i % paso === 0);
+
+    const slotW = n <= 1 ? RIGHT - LEFT : (RIGHT - LEFT) / (n - 1);
+    const slots = items.map((_, i) => ({ i, x: xAt(i, n) - slotW / 2, w: slotW }));
+
+    return {
+      ticks,
+      series,
+      xLabels,
+      slots,
+      rotarLabels: xLabels.length > 8,
+      mostrarMarcadores: n <= UMBRAL_DETALLE,
+      max
+    };
+  });
+
+  readonly tooltip = computed(() => {
+    const idx = this.hoverIdx();
+    const items = this.visibleItems();
+    if (idx === null || !items[idx]) return null;
+
+    const it = items[idx];
+    const n = items.length;
+    const max = this.chart().max;
+    // El backend ya entrega los costos con dos decimales: aquí solo se formatean.
+    const lines = SERIES_CONFIG.map(s => ({
+      label: s.label,
+      valor: formatoMonto(this.valorSerie(it, s.key)),
+      color: s.color
+    }));
+
+    const x = xAt(idx, n);
+    const boxW = 150;
+    const boxH = 26 + lines.length * 16;
+    const boxX = x + 12 + boxW > RIGHT + 8 ? x - 12 - boxW : x + 12;
+
+    return {
+      x,
+      boxX,
+      boxW,
+      boxH,
+      titulo: it.label,
+      lines,
+      dots: SERIES_CONFIG.map(s => ({ color: s.color, y: yAt(this.valorSerie(it, s.key), max) }))
+    };
   });
 
   ngOnInit(): void {
     const q = this.route.snapshot.queryParamMap;
-    const defaultRange = getLimaMonthRange();
+    const defaultRange = getRangoMesActual();
 
     this.from.set(q.get('from') || defaultRange.desde);
     this.to.set(q.get('to') || defaultRange.hasta);
-    const g = q.get('granularity') as Granularidad;
-    if (g === 'DAY' || g === 'WEEK' || g === 'MONTH') {
+    const g = q.get('granularity') as GranularidadUi;
+    if (g === 'AUTO' || g === 'DAY' || g === 'WEEK' || g === 'MONTH') {
       this.granularity.set(g);
     }
 
+    this.ajustarRango();
     this.cargar();
   }
 
-  setGranularity(g: Granularidad): void {
+  onFromChange(value: string): void {
+    this.from.set(value);
+    this.avisoAjuste.set('');
+  }
+
+  onToChange(value: string): void {
+    this.to.set(value);
+    this.avisoAjuste.set('');
+  }
+
+  setGranularity(g: GranularidadUi): void {
+    if (g === this.granularity()) return;
     this.granularity.set(g);
+    this.avisoAjuste.set('');
+    this.ajustarRango();
     this.cargar();
+  }
+
+  /** Muestra más períodos antiguos sin cambiar el rango consultado. */
+  mostrarAnteriores(): void {
+    this.ventana.update(v => v + AMPLIACION_VENTANA);
+    this.hoverIdx.set(null);
+  }
+
+  toggleTabla(): void {
+    this.tablaManual.set(!this.tablaVisible());
   }
 
   resetFiltros(): void {
-    const defaultRange = getLimaMonthRange();
+    const defaultRange = getRangoMesActual();
     this.from.set(defaultRange.desde);
     this.to.set(defaultRange.hasta);
-    this.granularity.set('DAY');
+    this.granularity.set('AUTO');
+    this.avisoAjuste.set('');
     this.cargar();
   }
 
   cargar(): void {
+    this.to.set(limitarAHoy(this.to()));
+    if (this.rangoError()) return;
+    this.cargarGrafico();
+  }
+
+  private cargarGrafico(): void {
     this.cargando.set(true);
     this.errorMensaje.set('');
-
-    const params: EstadisticasParams = {
-      from: this.from(),
-      to: this.to(),
-      granularity: this.granularity()
-    };
+    const seq = ++this.reqGrafico;
+    const gran = this.granEfectiva();
 
     const urlTree = this.router.createUrlTree([], {
       relativeTo: this.route,
-      queryParams: params
+      queryParams: {
+        from: this.from(),
+        to: this.to(),
+        granularity: this.granularity()
+      }
     });
     this.location.replaceState(urlTree.toString());
 
-    this.estadisticasApi.getEstadisticas(params).subscribe({
+    this.estadisticasApi.getPorTipo({
+      from: this.from(),
+      to: this.to(),
+      granularity: gran
+    }).subscribe({
       next: res => {
-        this.rawData.set(res);
+        if (seq !== this.reqGrafico) return;
+        this.dataGranularity.set(gran);
+        this.ventana.set(VENTANA_INICIAL[gran]);
+        this.hoverIdx.set(null);
+        this.tablaManual.set(null);
+        const hoy = getLimaTodayString();
+        this.puntos.set(res.filter(p => p.fecha <= hoy));
         this.cargando.set(false);
       },
       error: err => {
+        if (seq !== this.reqGrafico) return;
+        this.puntos.set([]);
         this.errorMensaje.set(parseApiError(err).message);
         this.cargando.set(false);
       }
     });
   }
 
+  /** Recorta "hasta" al máximo permitido por la granularidad. */
+  private ajustarRango(): void {
+    this.to.set(limitarAHoy(this.to()));
+    const from = this.from();
+    const to = this.to();
+    if (!from || !to || to < from) return;
+
+    const lim = this.granLimite();
+    const max = maxHasta(from, lim);
+    if (to <= max) return;
+
+    this.to.set(max);
+    const prefijo = this.granularity() === 'AUTO' ? '' : `con granularidad ${GRAN_NOMBRE[lim]} `;
+    this.avisoAjuste.set(`Rango ajustado: ${prefijo}el máximo es ${MESES_MAX_TEXTO[lim]}.`);
+  }
+
   private formatLabel(key: string, gran: Granularidad): string {
+    const parts = key.split('-');
+    if (parts.length !== 3) return key;
     switch (gran) {
-      case 'DAY': {
-        // key is yyyy-MM-dd -> 'DD/MM'
-        const parts = key.split('-');
-        return parts.length === 3 ? `${parts[2]}/${parts[1]}` : key;
-      }
-      case 'WEEK': {
-        // key is lunes de la semana -> 'Sem. DD/MM'
-        const parts = key.split('-');
-        return parts.length === 3 ? `Sem. ${parts[2]}/${parts[1]}` : key;
-      }
-      case 'MONTH': {
-        // key is yyyy-MM-01 -> 'MM/YYYY'
-        const parts = key.split('-');
-        return parts.length === 3 ? `${parts[1]}/${parts[0]}` : key;
-      }
+      case 'DAY':
+        return `${parts[2]}/${parts[1]}`;
+      case 'WEEK':
+        return `Sem. ${parts[2]}/${parts[1]}`;
+      case 'MONTH':
+        return `${parts[1]}/${parts[0]}`;
     }
   }
 }

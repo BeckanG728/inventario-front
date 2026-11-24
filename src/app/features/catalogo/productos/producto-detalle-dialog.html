@@ -1,0 +1,94 @@
+    <app-modal title="Detalle del producto" size="xl" [(isOpen)]="isOpen">
+      @if (producto(); as p) {
+        <div class="detail-head">
+          <div class="detail-head__text">
+            <h4 class="detail-name">{{ p.nombre }}</h4>
+            <span class="detail-sku font-mono">{{ p.codigo }}</span>
+          </div>
+          @if (p.activo) {
+            <app-badge variant="neutral" size="md">Activo</app-badge>
+          } @else {
+            <app-badge variant="danger" size="md">Inactivo</app-badge>
+          }
+        </div>
+
+        <div class="detail-sections">
+        <section class="detail-section" aria-labelledby="det-general">
+          <h5 id="det-general" class="detail-section__title">Información general</h5>
+          <dl class="detail-grid">
+            <div class="detail-item detail-item--full">
+              <dt>Descripción</dt>
+              <dd>{{ p.descripcion || 'Sin descripción registrada' }}</dd>
+            </div>
+            <div class="detail-item">
+              <dt>Categoría</dt>
+              <dd>{{ p.categoriaNombre || '—' }}</dd>
+            </div>
+            <div class="detail-item">
+              <dt>Unidad de medida</dt>
+              <dd>{{ p.unidadMedida }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="detail-section" aria-labelledby="det-inventario">
+          <h5 id="det-inventario" class="detail-section__title">Información de inventario</h5>
+          <dl class="detail-grid">
+            <div class="detail-item">
+              <dt>Stock actual</dt>
+              <dd class="font-mono detail-value--strong">{{ p.stockActual }}</dd>
+            </div>
+            <div class="detail-item">
+              <dt>Stock mínimo</dt>
+              <dd class="font-mono">{{ p.stockMinimo }}</dd>
+            </div>
+            <div class="detail-item">
+              <dt>Estado del inventario</dt>
+              <dd>
+                <app-stock-estado-badge [stockActual]="p.stockActual" [stockMinimo]="p.stockMinimo" />
+              </dd>
+            </div>
+          </dl>
+          @if (canAdjustStockMinimo()) {
+            <div class="detail-inline-action">
+              <app-button variant="secondary" size="sm" (btnClick)="stockMinimoClick.emit()">
+                Ajustar stock mínimo
+              </app-button>
+            </div>
+          }
+        </section>
+
+        @if (showCompras()) {
+          <section class="detail-section" aria-labelledby="det-compras">
+            <h5 id="det-compras" class="detail-section__title">Información de compras</h5>
+            <dl class="detail-grid">
+              <div class="detail-item">
+                <dt>Último costo de adquisición</dt>
+                <dd class="font-mono">
+                  {{ p.costoUltimaCompra !== null ? (p.costoUltimaCompra | appCurrency) : 'Sin compras registradas' }}
+                </dd>
+              </div>
+              <div class="detail-item">
+                <dt>Proveedor habitual</dt>
+                <dd>{{ p.proveedorRazonSocial || '—' }}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="detail-section" aria-labelledby="det-historial">
+            <h5 id="det-historial" class="detail-section__title">Historial de movimientos</h5>
+            <p class="detail-note">
+              El historial completo de entradas, consumos y ajustes se consulta en el reporte de movimientos.
+            </p>
+            <a class="detail-link" routerLink="/inventario/movimientos" (click)="isOpen.set(false)">
+              Ir al reporte de movimientos
+            </a>
+          </section>
+        }
+        </div>
+      }
+
+      <div modal-footer class="detail-actions">
+        <app-button variant="secondary" (btnClick)="isOpen.set(false)">Cerrar</app-button>
+      </div>
+    </app-modal>

@@ -1,0 +1,21 @@
+    .form-alert {
+      margin-bottom: var(--space-3);
+    }
+
+    .product-info {
+      margin-top: 0;
+      margin-bottom: var(--space-4);
+      font-size: var(--font-size-body);
+      color: var(--color-text-secondary);
+    }
+
+    .product-info strong {
+      color: var(--color-text-primary);
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      width: 100%;
+    }

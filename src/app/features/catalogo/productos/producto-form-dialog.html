@@ -1,0 +1,162 @@
+    <app-modal
+      [title]="isEdit() ? 'Modificar repuesto / producto' : 'Registrar nuevo repuesto / producto'"
+      size="md"
+      [(isOpen)]="isOpen"
+      (closed)="onCancel()"
+    >
+      @if (generalError()) {
+        <div class="inline-alert inline-alert--error form-alert" role="alert">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>{{ generalError() }}</span>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" id="productoForm" novalidate>
+        <app-field
+          label="Nombre del repuesto"
+          forId="nombre"
+          [required]="true"
+          hint="De 3 a 150 caracteres descriptivos"
+          [error]="nombreError()"
+        >
+          <input
+            id="nombre"
+            type="text"
+            formControlName="nombre"
+            autocomplete="off"
+            placeholder="Ej. Pastillas de freno delanteras"
+            [attr.aria-invalid]="!!nombreError()"
+          />
+        </app-field>
+
+        <app-field
+          label="Descripción (opcional)"
+          forId="descripcion"
+          hint="Detalles técnicos o compatibilidad (máximo 500 caracteres)"
+          [error]="descripcionError()"
+        >
+          <textarea
+            id="descripcion"
+            rows="2"
+            formControlName="descripcion"
+            placeholder="Detalles sobre marca, compatibilidad vehicular, etc."
+          ></textarea>
+        </app-field>
+
+        @if (!isEdit()) {
+          <div class="form-row">
+            <app-field
+              label="Categoría"
+              forId="idCategoria"
+              [required]="true"
+              hint="Familia o clasificación del repuesto"
+              [error]="categoriaError()"
+            >
+              <select
+                id="idCategoria"
+                formControlName="idCategoria"
+                [attr.aria-invalid]="!!categoriaError()"
+              >
+                <option [value]="0" disabled>Selecciona una categoría...</option>
+                @for (cat of catalogoLookup.categorias(); track cat.id) {
+                  <option [value]="cat.id">{{ cat.nombre }}</option>
+                }
+              </select>
+            </app-field>
+
+            <app-field
+              label="Proveedor distribuidor"
+              forId="idProveedor"
+              [required]="true"
+              hint="Proveedor principal del repuesto"
+              [error]="proveedorError()"
+            >
+              <select
+                id="idProveedor"
+                formControlName="idProveedor"
+                [attr.aria-invalid]="!!proveedorError()"
+              >
+                <option [value]="0" disabled>Selecciona un proveedor...</option>
+                @for (prv of catalogoLookup.proveedores(); track prv.id) {
+                  <option [value]="prv.id">{{ prv.razonSocial }}</option>
+                }
+              </select>
+            </app-field>
+          </div>
+
+          <div class="form-row">
+            <app-field
+              label="Stock mínimo"
+              forId="stockMinimo"
+              [required]="true"
+              hint="Nivel que activa alertas de reposición"
+              [error]="stockMinimoError()"
+            >
+              <input
+                id="stockMinimo"
+                type="number"
+                min="0"
+                step="1"
+                formControlName="stockMinimo"
+                [attr.aria-invalid]="!!stockMinimoError()"
+              />
+            </app-field>
+
+            <app-field
+              label="Unidad de medida"
+              forId="unidadMedida"
+              [required]="true"
+              hint="Ej. UNIDAD, JUEGO, LITRO, KIT (máx. 30 caracteres)"
+              [error]="unidadMedidaError()"
+            >
+              <input
+                id="unidadMedida"
+                type="text"
+                formControlName="unidadMedida"
+                placeholder="Ej. UNIDAD"
+                [attr.aria-invalid]="!!unidadMedidaError()"
+              />
+            </app-field>
+          </div>
+        } @else {
+          <app-field
+            label="Unidad de medida"
+            forId="unidadMedida"
+            [required]="true"
+            hint="Ej. UNIDAD, JUEGO, LITRO, KIT (máx. 30 caracteres)"
+            [error]="unidadMedidaError()"
+          >
+            <input
+              id="unidadMedida"
+              type="text"
+              formControlName="unidadMedida"
+              placeholder="Ej. UNIDAD"
+              [attr.aria-invalid]="!!unidadMedidaError()"
+            />
+          </app-field>
+        }
+      </form>
+
+      <div modal-footer class="dialog-actions">
+        <app-button
+          variant="secondary"
+          [disabled]="submitting()"
+          (btnClick)="onCancel()"
+        >
+          Cancelar
+        </app-button>
+
+        <app-button
+          type="submit"
+          variant="primary"
+          [loading]="submitting()"
+          (btnClick)="onSubmit()"
+        >
+          {{ isEdit() ? 'Guardar cambios' : 'Crear producto' }}
+        </app-button>
+      </div>
+    </app-modal>

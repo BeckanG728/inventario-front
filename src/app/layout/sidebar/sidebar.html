@@ -1,0 +1,79 @@
+@if (layout.isMobile() && layout.mobileOpen()) {
+  <div class="sidebar-backdrop" (click)="layout.closeMobile()" aria-hidden="true"></div>
+}
+
+<aside
+  id="app-sidebar"
+  class="sidebar"
+  [class.sidebar--compact]="compact()"
+  [class.sidebar--mobile]="layout.isMobile()"
+  [class.sidebar--open]="layout.mobileOpen()"
+>
+  <nav class="sidebar__nav" aria-label="Navegación principal">
+    @for (section of sections(); track section.id) {
+      <div class="sidebar__section" role="group" [attr.aria-label]="section.title">
+        @if (compact()) {
+          <div class="sidebar__divider"></div>
+        } @else {
+          <div class="sidebar__section-title">{{ section.title }}</div>
+        }
+
+        <ul class="sidebar__list">
+          @for (entry of section.entries; track entry.id) {
+            <li>
+              @if (entry.kind === 'link') {
+                <a
+                  class="sidebar__item"
+                  [routerLink]="entry.route"
+                  routerLinkActive="sidebar__item--active"
+                  ariaCurrentWhenActive="page"
+                  [attr.title]="compact() ? entry.label : null"
+                  [attr.aria-label]="compact() ? entry.label : null"
+                  (click)="onNavigate()"
+                >
+                  <svg [lucideIcon]="entry.icon" [size]="18" [strokeWidth]="1.75"></svg>
+                  <span class="sidebar__label">{{ entry.label }}</span>
+                </a>
+              } @else {
+                <button
+                  type="button"
+                  class="sidebar__item"
+                  [class.sidebar__item--active-group]="isGroupActive(entry)"
+                  [attr.aria-expanded]="isOpen(entry) && !compact()"
+                  [attr.aria-controls]="'sidebar-group-' + entry.id"
+                  [attr.title]="compact() ? entry.label : null"
+                  [attr.aria-label]="compact() ? entry.label : null"
+                  (click)="onGroupClick(entry)"
+                >
+                  <svg [lucideIcon]="entry.icon" [size]="18" [strokeWidth]="1.75"></svg>
+                  <span class="sidebar__label">{{ entry.label }}</span>
+                  <span class="sidebar__chevron" [class.sidebar__chevron--open]="isOpen(entry)">
+                    <svg [lucideIcon]="chevronIcon" [size]="16" [strokeWidth]="1.75"></svg>
+                  </span>
+                </button>
+
+                @if (isOpen(entry) && !compact()) {
+                  <ul class="sidebar__sublist" [id]="'sidebar-group-' + entry.id">
+                    @for (child of entry.children; track child.id) {
+                      <li>
+                        <a
+                          class="sidebar__item sidebar__item--child"
+                          [routerLink]="child.route"
+                          routerLinkActive="sidebar__item--active"
+                          ariaCurrentWhenActive="page"
+                          (click)="onNavigate()"
+                        >
+                          <span class="sidebar__label">{{ child.label }}</span>
+                        </a>
+                      </li>
+                    }
+                  </ul>
+                }
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </nav>
+</aside>

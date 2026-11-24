@@ -7,11 +7,7 @@ import { Badge, BadgeSize, BadgeVariant } from '../ui/badge/badge';
   standalone: true,
   imports: [Badge],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <app-badge [variant]="badgeVariant()" [size]="size()">
-      {{ badgeLabel() }}
-    </app-badge>
-  `
+  templateUrl: './stock-estado-badge.html'
 })
 export class StockEstadoBadge {
   readonly stockActual = input.required<number>();

@@ -1,0 +1,59 @@
+@if (totalElements() > 0) {
+  <nav class="pagination" aria-label="Navegación de páginas">
+    <div class="pagination__info">
+      Mostrando
+      <span class="font-mono">{{ fromIndex() }}</span>
+      a
+      <span class="font-mono">{{ toIndex() }}</span>
+      de
+      <span class="font-mono">{{ totalElements() }}</span>
+      resultados
+    </div>
+
+    <div class="pagination__controls">
+      <button
+        type="button"
+        class="pagination__btn"
+        [disabled]="isFirst()"
+        (click)="goToPage(page() - 1)"
+        aria-label="Página anterior"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <span class="pagination__label">Anterior</span>
+      </button>
+
+      <div class="pagination__pages">
+        @for (p of visiblePages(); track p) {
+          @if (p === -1) {
+            <span class="pagination__ellipsis">…</span>
+          } @else {
+            <button
+              type="button"
+              class="pagination__page-btn"
+              [class.pagination__page-btn--active]="p === page()"
+              [attr.aria-current]="p === page() ? 'page' : null"
+              (click)="goToPage(p)"
+            >
+              {{ p + 1 }}
+            </button>
+          }
+        }
+      </div>
+
+      <button
+        type="button"
+        class="pagination__btn"
+        [disabled]="isLast()"
+        (click)="goToPage(page() + 1)"
+        aria-label="Página siguiente"
+      >
+        <span class="pagination__label">Siguiente</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
+  </nav>
+}

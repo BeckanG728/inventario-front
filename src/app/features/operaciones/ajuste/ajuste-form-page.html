@@ -1,0 +1,140 @@
+<app-page-header
+  title="Registrar ajuste de inventario"
+  subtitle="Corrección por conteo físico real, mermas o diferencias de stock"
+/>
+
+@if (errorAlert()) {
+  <div class="inline-alert inline-alert--error alert-box" role="alert">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <span>{{ errorAlert() }}</span>
+  </div>
+}
+
+@if (lastSuccess(); as m) {
+  <div class="inline-alert inline-alert--success alert-box" role="status">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    </svg>
+    <div>
+      <strong>¡Ajuste de inventario registrado!</strong>
+      <p>
+        Movimiento #{{ m.id }}: Variación de <strong>{{ (m.variacion ?? 0) >= 0 ? '+' : '' }}{{ m.variacion ?? 0 }}</strong> unidades.
+        Stock previo: {{ m.stockAnterior }} ➔ Stock posterior fijado: <strong>{{ m.stockPosterior }}</strong>.
+      </p>
+    </div>
+  </div>
+}
+
+<div class="ajuste-layout">
+  <div class="data-panel form-card">
+    <div class="panel-head">
+      <h2>Datos del ajuste físico</h2>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+      <!-- Selector de producto -->
+      <app-field
+        label="Repuesto / Producto a ajustar"
+        forId="productoId"
+        [required]="true"
+        hint="Selecciona el producto a corregir en almacén"
+        [error]="productoError()"
+      >
+        <select id="productoId" formControlName="productoId" (change)="onProductoChange()">
+          <option [value]="0">-- Selecciona un producto --</option>
+          @for (p of productos(); track p.id) {
+            <option [value]="p.id">
+              {{ p.codigo }} — {{ p.nombre }} (Stock en sistema: {{ p.stockActual }})
+            </option>
+          }
+        </select>
+      </app-field>
+
+      @if (selectedProducto(); as p) {
+        <!-- Panel comparativo de stock -->
+        <div class="stock-comparison">
+          <div class="stock-box">
+            <span class="stock-label">Stock en sistema</span>
+            <span class="stock-value">{{ p.stockActual }}</span>
+            <span class="stock-unit">{{ p.unidadMedida }}</span>
+          </div>
+
+          <div class="stock-arrow">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </div>
+
+          <div class="stock-box highlight">
+            <span class="stock-label">Nuevo conteo físico</span>
+            <span class="stock-value">{{ form.controls.cantidadFisica.value }}</span>
+            <span class="stock-unit">{{ p.unidadMedida }}</span>
+          </div>
+
+          <div class="stock-diff">
+            <span class="stock-label">Variación resultante</span>
+            @if (variacionCalculada() > 0) {
+              <app-badge variant="success">+{{ variacionCalculada() }} (Incremento)</app-badge>
+            } @else if (variacionCalculada() < 0) {
+              <app-badge variant="danger">{{ variacionCalculada() }} (Disminución / Merma)</app-badge>
+            } @else {
+              <app-badge variant="neutral">Sin variación (0)</app-badge>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Cantidad física real -->
+      <app-field
+        label="Cantidad física verificada en taller"
+        forId="cantidadFisica"
+        [required]="true"
+        hint="Número exacto de unidades contadas en la estantería o almacén"
+        [error]="cantidadFisicaError()"
+      >
+        <input
+          id="cantidadFisica"
+          type="number"
+          min="0"
+          step="1"
+          formControlName="cantidadFisica"
+          placeholder="0"
+        />
+      </app-field>
+
+      <!-- Justificación obligatoria -->
+      <app-field
+        label="Justificación del ajuste"
+        forId="justificacion"
+        [required]="true"
+        hint="Explica el motivo del desbalance (conteo anual, pieza dañada, sobrante, etc.)"
+        [error]="justificacionError()"
+      >
+        <textarea
+          id="justificacion"
+          rows="3"
+          formControlName="justificacion"
+          placeholder="Motivo detallado del ajuste..."
+          maxlength="255"
+        ></textarea>
+      </app-field>
+
+      <div class="form-actions">
+        <app-button
+          type="submit"
+          variant="primary"
+          [disabled]="form.invalid || submitting() || !selectedProducto()"
+          [loading]="submitting()"
+        >
+          Aplicar ajuste de stock
+        </app-button>
+      </div>
+    </form>
+  </div>
+</div>

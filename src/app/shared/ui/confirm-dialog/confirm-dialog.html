@@ -1,0 +1,26 @@
+<app-modal
+  [title]="title()"
+  size="sm"
+  [(isOpen)]="isOpen"
+  (closed)="onCancel()"
+>
+  <p class="confirm-message">{{ message() }}</p>
+
+  <div modal-footer class="confirm-actions">
+    <app-button
+      variant="secondary"
+      [disabled]="submitting()"
+      (btnClick)="onCancel()"
+    >
+      {{ cancelText() }}
+    </app-button>
+
+    <app-button
+      [variant]="confirmVariant()"
+      [loading]="submitting()"
+      (btnClick)="onConfirm()"
+    >
+      {{ confirmText() }}
+    </app-button>
+  </div>
+</app-modal>

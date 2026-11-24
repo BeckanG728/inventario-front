@@ -1,0 +1,278 @@
+    <app-page-header
+      title="Catálogo de repuestos y productos"
+      subtitle="Consulta de inventario, existencias en almacén y niveles de reposición"
+    >
+      @if (isJefeTaller()) {
+        <app-button variant="primary" (btnClick)="openCreateDialog()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Nuevo producto
+        </app-button>
+      }
+    </app-page-header>
+
+    <!-- Barra de filtros reactiva -->
+    <div class="filter-bar data-panel">
+      <div class="filter-inputs">
+        <div class="search-input-wrap">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            type="search"
+            class="search-input"
+            placeholder="Buscar por nombre de producto..."
+            [formControl]="searchControl"
+          />
+        </div>
+
+        <select
+          class="category-select"
+          [formControl]="categoryControl"
+          aria-label="Filtrar por categoría"
+        >
+          <option [value]="0">Todas las categorías</option>
+          @for (cat of catalogoLookup.categorias(); track cat.id) {
+            <option [value]="cat.id">{{ cat.nombre }}</option>
+          }
+        </select>
+        <select
+          class="category-select"
+          [formControl]="unidadControl"
+          aria-label="Filtrar por unidad de medida"
+        >
+          <option value="">Todas las unidades</option>
+          @for (u of unidades; track u) {
+            <option [value]="u">{{ u }}</option>
+          }
+        </select>
+
+        <select
+          class="category-select"
+          [formControl]="estadoControl"
+          aria-label="Filtrar por estado del producto"
+        >
+          <option value="">Activos e inactivos</option>
+          <option value="true">Solo activos</option>
+          <option value="false">Solo inactivos</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <app-button variant="outline" size="sm" (btnClick)="loadProductos()">
+          Actualizar listado
+        </app-button>
+        <app-button variant="outline" size="sm" (btnClick)="limpiarFiltros()">
+          Limpiar filtros
+        </app-button>
+      </div>
+    </div>
+    
+
+    @if (errorMessage()) {
+      <div class="inline-alert inline-alert--error" role="alert">
+        <span>{{ errorMessage() }}</span>
+        <app-button variant="secondary" size="sm" (btnClick)="loadProductos()">
+          Reintentar
+        </app-button>
+      </div>
+    }
+
+    <!-- Tabla de resultados -->
+    <div class="table-wrapper" [class.table-loading]="loading() && productos().length > 0">
+      <table class="productos-table">
+        <thead>
+          <tr>
+            <th>Código SKU</th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th class="text-right">Stock</th>
+            <th>Estado del stock</th>
+            <th>Estado</th>
+            @if (isJefeTaller()) {
+              <th class="text-right">Último costo</th>
+            }
+            <th class="action-cell">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading() && productos().length === 0) {
+            @for (s of [1, 2, 3, 4, 5]; track s) {
+              <tr class="product-row">
+                <td><div class="skeleton" style="width: 90px; height: 16px;"></div></td>
+                <td><div class="skeleton" style="width: 180px; height: 16px;"></div></td>
+                <td><div class="skeleton" style="width: 100px; height: 16px;"></div></td>
+                <td class="text-right"><div class="skeleton" style="width: 40px; height: 16px; margin-left: auto;"></div></td>
+                <td><div class="skeleton" style="width: 70px; height: 20px;"></div></td>
+                <td><div class="skeleton" style="width: 60px; height: 20px;"></div></td>
+                @if (isJefeTaller()) {
+                  <td class="text-right"><div class="skeleton" style="width: 70px; height: 16px; margin-left: auto;"></div></td>
+                }
+                <td class="action-cell"><div class="skeleton" style="width: 36px; height: 36px; margin: 0 auto;"></div></td>
+              </tr>
+            }
+          } @else if (productos().length === 0) {
+            <tr>
+              <td [attr.colspan]="isJefeTaller() ? 8 : 7">
+                <div class="empty-state">
+                  <div class="empty-state__icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                    </svg>
+                  </div>
+                  <h3 class="empty-state__title">No se encontraron repuestos</h3>
+                  <p class="empty-state__description">
+                    No hay productos que coincidan con los filtros seleccionados o el catálogo está vacío.
+                  </p>
+                  @if (isJefeTaller()) {
+                    <app-button variant="primary" size="sm" (btnClick)="openCreateDialog()">
+                      Crear primer producto
+                    </app-button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @else {
+            @for (p of productos(); track p.id) {
+              <tr class="product-row" [class.row-inactive]="!p.activo">
+                <td class="cell-sku font-mono">
+                  <strong>{{ p.codigo }}</strong>
+                </td>
+
+                <td>
+                  <div class="cell-product">
+                    <button
+                      type="button"
+                      class="name-link"
+                      [title]="p.nombre"
+                      [attr.aria-label]="'Ver detalle de ' + p.nombre"
+                      (click)="openDetalleDialog(p)"
+                    >
+                      {{ p.nombre }}
+                    </button>
+                  </div>
+                </td>
+
+                <td>
+                  <div
+                    class="cell-truncate cell-category"
+                    [title]="p.categoriaNombre || catalogoLookup.getNombreCategoria(p.categoriaId)"
+                  >
+                    {{ p.categoriaNombre || catalogoLookup.getNombreCategoria(p.categoriaId) }}
+                  </div>
+                </td>
+
+                <td class="text-right">
+                  <div class="stock-cell">
+                    <span class="stock-cell__actual font-mono">{{ p.stockActual }}</span>
+                    <span class="stock-cell__min font-mono">Mín. {{ p.stockMinimo }}</span>
+                  </div>
+                </td>
+
+                <td>
+                  <app-stock-estado-badge
+                    [stockActual]="p.stockActual"
+                    [stockMinimo]="p.stockMinimo"
+                  />
+                </td>
+
+                <td>
+                  @if (p.activo) {
+                    <app-badge variant="neutral" size="sm">Activo</app-badge>
+                  } @else {
+                    <app-badge variant="danger" size="sm">Inactivo</app-badge>
+                  }
+                </td>
+
+                @if (isJefeTaller()) {
+                  <td class="text-right font-mono cell-cost">
+                    {{ p.costoUltimaCompra | appCurrency }}
+                  </td>
+                }
+
+                <td class="action-cell">
+                  <div class="row-actions">
+                    <button
+                      type="button"
+                      class="row-btn"
+                      title="Ver detalle"
+                      [attr.aria-label]="'Ver detalle de ' + p.nombre"
+                      (click)="openDetalleDialog(p)"
+                    >
+                      <svg lucideEye [size]="17" aria-hidden="true"></svg>
+                    </button>
+
+                    @if (isJefeTaller()) {
+                      <button
+                        type="button"
+                        class="row-btn"
+                        title="Editar producto"
+                        [attr.aria-label]="'Editar ' + p.nombre"
+                        (click)="openEditDialog(p)"
+                      >
+                        <svg lucidePencil [size]="17" aria-hidden="true"></svg>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="row-btn row-btn--danger"
+                        [title]="p.activo ? 'Desactivar producto' : 'El producto ya está inactivo'"
+                        [attr.aria-label]="'Desactivar ' + p.nombre"
+                        [disabled]="!p.activo"
+                        (click)="confirmDesactivar(p)"
+                      >
+                        <svg lucideBan [size]="17" aria-hidden="true"></svg>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginador -->
+    <app-pagination
+      [page]="currentPage()"
+      [size]="pageSize()"
+      [totalElements]="totalElements()"
+      [totalPages]="totalPages()"
+      (pageChange)="onPageChange($event)"
+    />
+
+    <!-- Diálogos modales -->
+    <app-producto-detalle-dialog
+      [(isOpen)]="isDetalleOpen"
+      [producto]="selectedProducto()"
+      [showCompras]="isJefeTaller()"
+      [canAdjustStockMinimo]="isJefeTaller()"
+      (stockMinimoClick)="onDetalleStockMinimo()"
+    />
+
+    <app-producto-form-dialog
+      [(isOpen)]="isFormOpen"
+      [productoToEdit]="selectedProducto()"
+      (saved)="onProductoSaved($event)"
+    />
+
+    <app-stock-minimo-dialog
+      [(isOpen)]="isStockMinimoOpen"
+      [producto]="selectedProducto()"
+      (saved)="onProductoSaved($event)"
+    />
+
+    <app-confirm-dialog
+      [(isOpen)]="isConfirmOpen"
+      title="Desactivar producto"
+      [message]="confirmMessage()"
+      confirmText="Sí, desactivar"
+      confirmVariant="destructive"
+      [submitting]="actionSubmitting()"
+      (confirmed)="executeDesactivar()"
+    />

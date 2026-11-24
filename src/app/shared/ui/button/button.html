@@ -1,0 +1,15 @@
+<button
+  [type]="type()"
+  [disabled]="disabled() || loading()"
+  class="btn btn--{{ variant() }} btn--{{ size() }}"
+  [class.btn--loading]="loading()"
+  [class.btn--block]="block()"
+  (click)="onClick($event)"
+>
+  @if (loading()) {
+    <app-spinner [size]="size() === 'lg' ? 'md' : 'sm'" color="current" />
+  }
+  <span class="btn__content" [class.btn__content--hidden]="loading() && hideTextOnLoading()">
+    <ng-content />
+  </span>
+</button>
