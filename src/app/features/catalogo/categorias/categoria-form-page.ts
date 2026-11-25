@@ -64,6 +64,7 @@ export class CategoriaFormPage implements OnInit {
   readonly listError = signal<string | null>(null);
 
   ngOnInit(): void {
+    this.catalogoLookup.cargarFiltros().subscribe();
     this.cargar();
 
     // Búsqueda por nombre con retardo de 300 ms; al cambiar un filtro se vuelve a la primera página.
@@ -125,6 +126,7 @@ export class CategoriaFormPage implements OnInit {
 
     const { nombre } = this.form.getRawValue();
 
+    // Las unidades válidas vienen de la semilla de negocio de V10; el backend asigna UND por defecto.
     this.catalogoApi.crearCategoria({ nombre: nombre.trim() }).subscribe({
       next: (resp) => {
         this.submitting.set(false);
@@ -136,12 +138,10 @@ export class CategoriaFormPage implements OnInit {
       error: (err) => {
         this.submitting.set(false);
         const apiErr = parseApiError(err);
-
         if (apiErr.status === 409) {
           this.form.controls.nombre.setErrors({ server: 'Ya existe una categoría registrada con ese nombre.' });
           return;
         }
-
         this.generalError.set(apiErr.message || 'Error al registrar la categoría.');
       }
     });

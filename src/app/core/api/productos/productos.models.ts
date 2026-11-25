@@ -3,7 +3,9 @@
 export interface CreateProductoRequest {
   nombre: string;
   descripcion?: string;
-  unidadMedida: string;
+  unidadBaseId: number;
+  unidadPresentacionId?: number;
+  factorPresentacion?: number;
   stockMinimo: number;
   id_categoria: number;
   id_proveedor: number;
@@ -15,7 +17,9 @@ export interface CreateProductoRequest {
 export interface UpdateProductoRequest {
   nombre: string;
   descripcion?: string;
-  unidadMedida: string;
+  unidadBaseId: number;
+  unidadPresentacionId?: number;
+  factorPresentacion?: number;
   stockMinimo: number;
   activo?: boolean;
   id_categoria: number;
@@ -34,7 +38,6 @@ export interface ProductoResponse {
   codigo: string;
   nombre: string;
   descripcion: string | null;
-  unidadMedida: string;
   stockActual: number;
   stockMinimo: number;
   stockCritico: boolean;
@@ -44,6 +47,12 @@ export interface ProductoResponse {
   categoriaNombre: string;
   proveedorId: number;
   proveedorRazonSocial: string;
+  unidadBaseId: number;
+  unidadBaseCodigo: string;
+  unidadBaseNombre: string;
+  unidadPresentacionId?: number | null;
+  unidadPresentacionCodigo?: string | null;
+  factorPresentacion?: number | null;
   // Alias de conveniencia por si se accede como idCategoria o idProveedor
   idCategoria?: number;
   idProveedor?: number;

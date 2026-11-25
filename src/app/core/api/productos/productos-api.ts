@@ -18,7 +18,7 @@ export interface ListarProductosParams {
   categoria?: number;
   codigo?: string;
   proveedor?: number;
-  unidadMedida?: string;
+  unidadBaseId?: number;
   activo?: boolean;
   stockCritico?: boolean;
 }
@@ -51,8 +51,8 @@ export class ProductosApi {
     if (params.proveedor !== undefined && params.proveedor !== null && params.proveedor > 0) {
       httpParams = httpParams.set('proveedor', params.proveedor.toString());
     }
-    if (params.unidadMedida && params.unidadMedida.trim()) {
-      httpParams = httpParams.set('unidadMedida', params.unidadMedida.trim());
+    if (params.unidadBaseId !== undefined && params.unidadBaseId !== null && params.unidadBaseId > 0) {
+      httpParams = httpParams.set('unidadBaseId', params.unidadBaseId.toString());
     }
     if (params.activo !== undefined && params.activo !== null) {
       httpParams = httpParams.set('activo', String(params.activo));

@@ -7,6 +7,7 @@ import { ProductosApi } from '@core/api/productos/productos-api';
 import { ProductoResponse } from '@core/api/productos/productos.models';
 import { OperacionesApi } from '@core/api/operaciones/operaciones-api';
 import { ConsumoRequest, ConsumoResponse, ProductoFrecuente } from '@core/api/operaciones/operaciones.models';
+import { construirRegistroUnidad } from '@core/api/operaciones/unidad-registro';
 import { ToastService } from '@core/notifications/toast-service';
 import { parseApiError } from '@core/api/api-error';
 import { HasUnsavedChanges } from '@core/router/unsaved-changes.guard';
@@ -143,11 +144,13 @@ export class ConsumoPage implements OnInit, HasUnsavedChanges {
       productoId: p.productoId,
       codigo: p.codigo,
       nombre: p.nombre,
-      unidadMedida: p.unidadMedida,
       stockActual: p.stockActual,
       stockMinimo: p.stockMinimo,
       categoriaNombre: p.categoriaNombre,
-      vecesConsumido: p.vecesConsumido
+      vecesConsumido: p.vecesConsumido,
+      unidadBaseCodigo: p.unidadBaseCodigo ?? null,
+      unidadPresentacionCodigo: p.unidadPresentacionCodigo ?? null,
+      factorPresentacion: p.factorPresentacion ?? null
     };
   }
 
@@ -157,10 +160,12 @@ export class ConsumoPage implements OnInit, HasUnsavedChanges {
       productoId: p.id,
       codigo: p.codigo,
       nombre: p.nombre,
-      unidadMedida: p.unidadMedida,
       stockActual: p.stockActual,
       stockMinimo: p.stockMinimo,
-      categoriaNombre: p.categoriaNombre
+      categoriaNombre: p.categoriaNombre,
+      unidadBaseCodigo: p.unidadBaseCodigo ?? null,
+      unidadPresentacionCodigo: p.unidadPresentacionCodigo ?? null,
+      factorPresentacion: p.factorPresentacion ?? null
     };
   }
 
@@ -171,6 +176,16 @@ export class ConsumoPage implements OnInit, HasUnsavedChanges {
 
   onQuantityChange(productoId: number, qty: number): void {
     this.cart.updateQuantity(productoId, qty);
+    this.errorAlert.set(null);
+  }
+
+  onUnidadChange(productoId: number, codigo: string): void {
+    this.cart.updateUnidad(productoId, codigo);
+    this.errorAlert.set(null);
+  }
+
+  onCantidadExactaChange(productoId: number, valor: number): void {
+    this.cart.updateCantidadExacta(productoId, valor);
     this.errorAlert.set(null);
   }
 
@@ -204,7 +219,12 @@ export class ConsumoPage implements OnInit, HasUnsavedChanges {
       referenciaVehiculoCliente: raw.referenciaVehiculoCliente.trim() || null,
       items: this.cart.items().map(i => ({
         productoId: i.producto.productoId,
-        cantidad: i.cantidad
+        ...construirRegistroUnidad(
+          i.producto as unknown as ProductoResponse,
+          i.unidadRegistro,
+          i.cantidad,
+          i.cantidadExacta || null
+        )
       }))
     };
 

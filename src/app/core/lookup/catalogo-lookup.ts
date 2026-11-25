@@ -3,6 +3,8 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { catchError, forkJoin, map, Observable, of, shareReplay, tap } from 'rxjs';
 import { CatalogoApi } from '../api/catalogo/catalogo-api';
 import { CategoriaResponse, ProveedorResponse } from '../api/catalogo/catalogo.models';
+import { UnidadesApi } from '../api/unidades/unidades-api';
+import { UnidadResponse } from '../api/unidades/unidades.models';
 
 /**
  * Catálogo de categorías y proveedores en memoria.
@@ -13,13 +15,17 @@ import { CategoriaResponse, ProveedorResponse } from '../api/catalogo/catalogo.m
 @Injectable({ providedIn: 'root' })
 export class CatalogoLookup {
   private readonly catalogoApi = inject(CatalogoApi);
+  private readonly unidadesApi = inject(UnidadesApi);
 
   private readonly _categorias = signal<CategoriaResponse[]>([]);
   private readonly _proveedores = signal<ProveedorResponse[]>([]);
+  private readonly _unidades = signal<UnidadResponse[]>([]);
+  private readonly _unidadesPorCategoria = signal<Map<number, UnidadResponse[]>>(new Map());
   private filtros$: Observable<void> | null = null;
 
   readonly categorias = this._categorias.asReadonly();
   readonly proveedores = this._proveedores.asReadonly();
+  readonly unidades = this._unidades.asReadonly();
 
   readonly categoriasMap = computed(() => new Map(this._categorias().map(c => [c.id, c.nombre] as const)));
   readonly proveedoresMap = computed(() => new Map(this._proveedores().map(p => [p.id, p.razonSocial] as const)));
@@ -29,11 +35,13 @@ export class CatalogoLookup {
     if (!this.filtros$) {
       this.filtros$ = forkJoin({
         categorias: this.catalogoApi.listarCategoriasActivas(),
-        proveedores: this.catalogoApi.listarProveedoresActivos()
+        proveedores: this.catalogoApi.listarProveedoresActivos(),
+        unidades: this.unidadesApi.listar()
       }).pipe(
-        tap(({ categorias, proveedores }) => {
+        tap(({ categorias, proveedores, unidades }) => {
           this._categorias.set(categorias);
           this._proveedores.set(proveedores);
+          this._unidades.set(unidades);
         }),
         map(() => void 0),
         // Si falla, se conservan solo los datos ya cargados en memoria.
@@ -78,6 +86,38 @@ export class CatalogoLookup {
       for (const proveedor of proveedores) mapa.set(proveedor.id, proveedor);
       return Array.from(mapa.values());
     });
+  }
+
+  /** Carga (y cachea) las unidades válidas para una categoría; alimenta el combobox del producto. */
+  cargarUnidadesPorCategoria(categoriaId: number): Observable<UnidadResponse[]> {
+    if (categoriaId <= 0) {
+      return of([]);
+    }
+    const cache = this._unidadesPorCategoria();
+    if (cache.has(categoriaId)) {
+      return of(cache.get(categoriaId)!);
+    }
+    return this.unidadesApi.listarPorCategoria(categoriaId).pipe(
+      tap(unidades => {
+        const nuevo = new Map(this._unidadesPorCategoria());
+        nuevo.set(categoriaId, unidades);
+        this._unidadesPorCategoria.set(nuevo);
+      }),
+      catchError(() => of([]))
+    );
+  }
+
+  unidadesDe(categoriaId: number): UnidadResponse[] {
+    return this._unidadesPorCategoria().get(categoriaId) ?? [];
+  }
+
+  unidadPorCodigo(codigo: string | null | undefined): UnidadResponse | undefined {
+    if (!codigo) return undefined;
+    return this._unidades().find(u => u.codigo === codigo);
+  }
+
+  permiteFragmentacion(codigo: string | null | undefined): boolean {
+    return this.unidadPorCodigo(codigo)?.permiteFragmentacion ?? false;
   }
 
   getNombreCategoria(idCategoria: number | null | undefined): string {

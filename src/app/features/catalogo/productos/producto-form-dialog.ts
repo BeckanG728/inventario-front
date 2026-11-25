@@ -4,6 +4,7 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { ProductosApi } from '@core/api/productos/productos-api';
 import { CreateProductoRequest, ProductoResponse, UpdateProductoRequest } from '@core/api/productos/productos.models';
 import { CatalogoLookup } from '@core/lookup/catalogo-lookup';
+import { UnidadResponse } from '@core/api/unidades/unidades.models';
 import { parseApiError } from '@core/api/api-error';
 import { getFirstErrorMessage } from '@shared/forms/error-messages';
 import { Modal } from '@shared/ui/modal/modal';
@@ -36,10 +37,15 @@ export class ProductoFormDialog {
     idCategoria: [0, [Validators.required, Validators.min(1)]],
     idProveedor: [0, [Validators.required, Validators.min(1)]],
     stockMinimo: [5, [Validators.required, Validators.min(0)]],
-    unidadMedida: ['UNIDAD', [Validators.required, Validators.maxLength(30)]]
+    unidadBaseId: [0, [Validators.required]],
+    unidadPresentacionId: [0],
+    factorPresentacion: [0]
   });
 
   readonly isEdit = computed(() => !!this.productoToEdit());
+  readonly unidadesDisponibles = signal<UnidadResponse[]>([]);
+  readonly unidadSeleccionada = computed(() =>
+    this.unidadesDisponibles().find(u => u.id === this.form.controls.unidadBaseId.value));
 
   constructor() {
     effect(() => {
@@ -51,7 +57,9 @@ export class ProductoFormDialog {
           idCategoria: prod.categoriaId ?? prod.idCategoria ?? 0,
           idProveedor: prod.proveedorId ?? prod.idProveedor ?? 0,
           stockMinimo: prod.stockMinimo,
-          unidadMedida: prod.unidadMedida
+          unidadBaseId: prod.unidadBaseId,
+          unidadPresentacionId: prod.unidadPresentacionId ?? 0,
+          factorPresentacion: prod.factorPresentacion ?? 0
         });
       } else {
         this.form.reset({
@@ -60,10 +68,29 @@ export class ProductoFormDialog {
           idCategoria: this.catalogoLookup.categorias()[0]?.id || 0,
           idProveedor: this.catalogoLookup.proveedores()[0]?.id || 0,
           stockMinimo: 5,
-          unidadMedida: 'UNIDAD'
+          unidadBaseId: 0,
+          unidadPresentacionId: 0,
+          factorPresentacion: 0
         });
       }
       this.generalError.set(null);
+    });
+
+    // El combobox de unidades solo ofrece las válidas para la categoría elegida.
+    effect(() => {
+      const categoriaId = this.form.controls.idCategoria.value;
+      this.unidadesDisponibles.set([]);
+      this.catalogoLookup.cargarUnidadesPorCategoria(categoriaId).subscribe(unidades => {
+        this.unidadesDisponibles.set(unidades);
+        const idUnidad = this.form.controls.unidadBaseId.value;
+        if (idUnidad > 0 && !unidades.some(u => u.id === idUnidad)) {
+          this.form.patchValue({
+            unidadBaseId: 0,
+            unidadPresentacionId: 0,
+            factorPresentacion: 0
+          });
+        }
+      });
     });
   }
 
@@ -102,9 +129,12 @@ export class ProductoFormDialog {
     };
   }
 
-  get unidadMedidaError(): () => string | null {
+  get unidadBaseIdError(): () => string | null {
     return () => {
-      const ctrl = this.form.controls.unidadMedida;
+      const ctrl = this.form.controls.unidadBaseId;
+      if (ctrl.touched && (!ctrl.value || ctrl.value <= 0)) {
+        return 'Debes seleccionar una unidad base.';
+      }
       return ctrl.touched ? getFirstErrorMessage(ctrl.errors) : null;
     };
   }
@@ -123,13 +153,18 @@ export class ProductoFormDialog {
     this.generalError.set(null);
 
     const raw = this.form.getRawValue();
+    const prod = this.productoToEdit()!;
+    const unidadBaseId = raw.unidadBaseId;
+    const unidadPresentacionId = raw.unidadPresentacionId > 0 ? raw.unidadPresentacionId : undefined;
+    const factorPresentacion = raw.factorPresentacion > 0 ? raw.factorPresentacion : undefined;
 
     if (this.isEdit()) {
-      const prod = this.productoToEdit()!;
       const updateReq: UpdateProductoRequest = {
         nombre: raw.nombre.trim(),
         descripcion: raw.descripcion.trim() || undefined,
-        unidadMedida: raw.unidadMedida.trim(),
+        unidadBaseId,
+        unidadPresentacionId,
+        factorPresentacion,
         stockMinimo: prod.stockMinimo,
         activo: prod.activo,
         id_categoria: prod.categoriaId ?? prod.idCategoria ?? raw.idCategoria,
@@ -154,7 +189,9 @@ export class ProductoFormDialog {
       const createReq: CreateProductoRequest = {
         nombre: raw.nombre.trim(),
         descripcion: raw.descripcion.trim() || undefined,
-        unidadMedida: raw.unidadMedida.trim(),
+        unidadBaseId,
+        unidadPresentacionId,
+        factorPresentacion,
         stockMinimo: raw.stockMinimo,
         id_categoria: raw.idCategoria,
         id_proveedor: raw.idProveedor,
@@ -182,7 +219,15 @@ export class ProductoFormDialog {
                 this.form.controls.idProveedor.setErrors({ server: d.reason });
               }
               if (d.field === 'stockMinimo') this.form.controls.stockMinimo.setErrors({ server: d.reason });
-              if (d.field === 'unidadMedida') this.form.controls.unidadMedida.setErrors({ server: d.reason });
+              if (d.field === 'unidadBaseId') {
+                this.form.controls.unidadBaseId.setErrors({ server: d.reason });
+              }
+              if (d.field === 'unidadPresentacionId') {
+                this.form.controls.unidadPresentacionId.setErrors({ server: d.reason });
+              }
+              if (d.field === 'factorPresentacion') {
+                this.form.controls.factorPresentacion.setErrors({ server: d.reason });
+              }
             }
             return;
           }

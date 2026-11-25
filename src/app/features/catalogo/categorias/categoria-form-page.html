@@ -34,6 +34,26 @@
             />
           </app-field>
 
+          <app-field
+            label="Unidades válidas"
+            forId="unidadIds"
+            [required]="true"
+            hint="Selecciona al menos una unidad; el producto solo podrá usar estas unidades"
+            [error]="unidadesError()"
+          >
+            <select
+              id="unidadIds"
+              multiple
+              size="5"
+              formControlName="unidadIds"
+              [attr.aria-invalid]="!!unidadesError()"
+            >
+              @for (u of unidades(); track u.id) {
+                <option [value]="u.id">{{ u.nombre }} ({{ u.codigo }})</option>
+              }
+            </select>
+          </app-field>
+
           <div class="form-actions">
             <app-button
               type="submit"
@@ -45,6 +65,42 @@
             </app-button>
           </div>
         </form>
+      </div>
+
+      <!-- Configurar unidades de una categoría existente -->
+      <div class="data-panel form-card">
+        <div class="panel-head">
+          <h2>Unidades por categoría</h2>
+          <span class="panel-meta">Configuración</span>
+        </div>
+        <app-field label="Categoría" forId="categoriaAsignacion">
+          <select id="categoriaAsignacion" [formControl]="categoriaAsignacionControl">
+            <option [value]="0">Selecciona una categoría...</option>
+            @for (cat of categorias(); track cat.id) {
+              <option [value]="cat.id">{{ cat.nombre }}</option>
+            }
+          </select>
+        </app-field>
+        <app-field
+          label="Unidades válidas"
+          forId="unidadesAsignacion"
+          hint="Selecciona una o más unidades (Ctrl + clic)"
+        >
+          <select id="unidadesAsignacion" multiple size="5" [formControl]="unidadesAsignacionControl">
+            @for (u of unidades(); track u.id) {
+              <option [value]="u.id">{{ u.nombre }} ({{ u.codigo }})</option>
+            }
+          </select>
+        </app-field>
+        <div class="form-actions">
+          <app-button
+            variant="secondary"
+            [loading]="asignandoUnidades()"
+            (btnClick)="guardarUnidades()"
+          >
+            Guardar unidades
+          </app-button>
+        </div>
       </div>
 
       <!-- Listado paginado (viene del servidor) -->

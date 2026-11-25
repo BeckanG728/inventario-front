@@ -5,6 +5,7 @@ import { ProductosApi } from '@core/api/productos/productos-api';
 import { ProductoResponse } from '@core/api/productos/productos.models';
 import { OperacionesApi } from '@core/api/operaciones/operaciones-api';
 import { AjusteRequest, MovimientoResponse } from '@core/api/operaciones/operaciones.models';
+import { construirRegistroUnidad, unidadesDeRegistro } from '@core/api/operaciones/unidad-registro';
 import { ToastService } from '@core/notifications/toast-service';
 import { parseApiError } from '@core/api/api-error';
 import { PageHeader } from '@shared/ui/page-header/page-header';
@@ -36,13 +37,22 @@ export class AjusteFormPage implements OnInit {
   readonly form = this.fb.group({
     productoId: [0, [Validators.required, Validators.min(1)]],
     cantidadFisica: [0, [Validators.required, Validators.min(0)]],
-    justificacion: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(255)]]
+    justificacion: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(255)]],
+    unidadRegistro: [''],
+    cantidadFisicaExacta: [0]
+  });
+
+  readonly unidadesRegistro = computed(() => unidadesDeRegistro(this.selectedProducto()));
+  readonly permiteDecimal = computed(() => {
+    const u = this.form.controls.unidadRegistro.value;
+    return u === 'METRO' || u === 'ROLLO';
   });
 
   readonly variacionCalculada = computed(() => {
     const prod = this.selectedProducto();
     if (!prod) return 0;
-    const fisica = this.form.controls.cantidadFisica.value;
+    const exacta = this.form.controls.cantidadFisicaExacta.value;
+    const fisica = exacta > 0 ? exacta * (prod.factorPresentacion ?? 1) : this.form.controls.cantidadFisica.value;
     return fisica - prod.stockActual;
   });
 
@@ -65,6 +75,8 @@ export class AjusteFormPage implements OnInit {
 
     if (prod) {
       this.form.controls.cantidadFisica.setValue(prod.stockActual);
+      this.form.controls.unidadRegistro.setValue(prod.unidadBaseCodigo || '');
+      this.form.controls.cantidadFisicaExacta.setValue(0);
     }
   }
 
@@ -85,8 +97,14 @@ export class AjusteFormPage implements OnInit {
     const raw = this.form.getRawValue();
     const req: AjusteRequest = {
       productoId: Number(raw.productoId),
-      cantidadFisica: Number(raw.cantidadFisica),
-      justificacion: raw.justificacion.trim()
+      justificacion: raw.justificacion.trim(),
+      ...construirRegistroUnidad(
+        this.selectedProducto(),
+        raw.unidadRegistro,
+        Number(raw.cantidadFisica),
+        raw.cantidadFisicaExacta || null,
+        'cantidadFisica'
+      )
     };
 
     this.operacionesApi.registrarAjuste(req).subscribe({
@@ -97,7 +115,9 @@ export class AjusteFormPage implements OnInit {
         this.form.reset({
           productoId: 0,
           cantidadFisica: 0,
-          justificacion: ''
+          justificacion: '',
+          unidadRegistro: '',
+          cantidadFisicaExacta: 0
         });
         this.selectedProducto.set(null);
         this.cargarProductos();

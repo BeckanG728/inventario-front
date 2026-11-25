@@ -3,6 +3,7 @@
 export interface CategoriaRequest {
   nombre: string;
   descripcion?: string;
+  unidadIds?: number[];
 }
 
 export interface CategoriaResponse {
@@ -10,6 +11,7 @@ export interface CategoriaResponse {
   nombre: string;
   descripcion?: string | null;
   activo?: boolean;
+  unidades?: { id: number; codigo: string; nombre: string; permiteFragmentacion: boolean }[];
 }
 
 export interface ProveedorRequest {

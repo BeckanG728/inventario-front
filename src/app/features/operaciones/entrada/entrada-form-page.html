@@ -75,7 +75,7 @@
         <div class="product-preview">
           <div class="preview-item">
             <span class="preview-label">Stock actual:</span>
-            <span class="preview-value"><strong>{{ p.stockActual }}</strong> {{ p.unidadMedida }}</span>
+            <span class="preview-value"><strong>{{ p.stockActual }}</strong> {{ p.unidadBaseCodigo }}</span>
           </div>
           <div class="preview-item">
             <span class="preview-label">Último costo de compra:</span>
@@ -104,6 +104,20 @@
       </app-field>
 
       <div class="form-row">
+        @if (unidadesRegistro().length > 1) {
+          <app-field
+            label="Registrar en"
+            forId="unidadRegistro"
+            hint="Unidad base o presentación del producto"
+          >
+            <select id="unidadRegistro" formControlName="unidadRegistro">
+              @for (u of unidadesRegistro(); track u) {
+                <option [value]="u">{{ u }}</option>
+              }
+            </select>
+          </app-field>
+        }
+
         <!-- Cantidad ingresada -->
         <app-field
           label="Cantidad recibida"
@@ -121,6 +135,22 @@
             placeholder="1"
           />
         </app-field>
+
+        @if (permiteDecimal()) {
+          <app-field
+            label="Cantidad exacta (decimal)"
+            forId="cantidadExacta"
+            hint="Ej. 1.5 metros = 150 cm"
+          >
+            <input
+              id="cantidadExacta"
+              type="number"
+              min="0"
+              step="0.01"
+              formControlName="cantidadExacta"
+            />
+          </app-field>
+        }
 
         <!-- Costo unitario -->
         <app-field

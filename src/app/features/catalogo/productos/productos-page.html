@@ -42,11 +42,11 @@
         <select
           class="category-select"
           [formControl]="unidadControl"
-          aria-label="Filtrar por unidad de medida"
+          aria-label="Filtrar por unidad base"
         >
-          <option value="">Todas las unidades</option>
-          @for (u of unidades; track u) {
-            <option [value]="u">{{ u }}</option>
+          <option [value]="0">Todas las unidades</option>
+          @for (u of unidades(); track u.id) {
+            <option [value]="u.id">{{ u.nombre }} ({{ u.codigo }})</option>
           }
         </select>
 

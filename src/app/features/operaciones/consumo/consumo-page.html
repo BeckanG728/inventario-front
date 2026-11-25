@@ -81,7 +81,7 @@
                   </div>
                   <h3 class="product-name">{{ prod.nombre }}</h3>
                   <div class="product-stock-info">
-                    <span>Stock disponible: <strong>{{ prod.stockActual }} {{ prod.unidadMedida }}</strong></span>
+                    <span>Stock disponible: <strong>{{ prod.stockActual }} {{ prod.unidadBaseCodigo }}</strong></span>
                     @if (prod.categoriaNombre) {
                       <span class="text-secondary text-xs">• {{ prod.categoriaNombre }}</span>
                     }
@@ -196,11 +196,37 @@
                   </div>
                   <h4 class="item-name">{{ item.producto.nombre }}</h4>
                   <span class="text-xs text-secondary">
-                    Disponible: {{ item.producto.stockActual }} {{ item.producto.unidadMedida }}
+                    Disponible: {{ item.producto.stockActual }} {{ item.producto.unidadBaseCodigo }}
                   </span>
                 </div>
 
                 <div class="item-controls">
+                  @if (cart.unidadesDeRegistro(item).length > 1) {
+                    <select
+                      class="unit-select"
+                      [value]="item.unidadRegistro"
+                      (change)="onUnidadChange(item.producto.productoId, $any($event.target).value)"
+                      [attr.aria-label]="'Unidad de registro de ' + item.producto.nombre"
+                    >
+                      @for (u of cart.unidadesDeRegistro(item); track u) {
+                        <option [value]="u">{{ u }}</option>
+                      }
+                    </select>
+                  }
+
+                  @if (cart.esLongitud(item)) {
+                    <input
+                      class="exact-input"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Metros"
+                      [value]="item.cantidadExacta || null"
+                      (input)="onCantidadExactaChange(item.producto.productoId, +$any($event.target).value)"
+                      [attr.aria-label]="'Cantidad exacta de ' + item.producto.nombre"
+                    />
+                  }
+
                   <!-- Stepper táctil (min 44px) -->
                   <app-stepper
                     [value]="item.cantidad"

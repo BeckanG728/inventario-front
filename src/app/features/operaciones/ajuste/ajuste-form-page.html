@@ -61,7 +61,7 @@
           <div class="stock-box">
             <span class="stock-label">Stock en sistema</span>
             <span class="stock-value">{{ p.stockActual }}</span>
-            <span class="stock-unit">{{ p.unidadMedida }}</span>
+            <span class="stock-unit">{{ p.unidadBaseCodigo }}</span>
           </div>
 
           <div class="stock-arrow">
@@ -74,7 +74,7 @@
           <div class="stock-box highlight">
             <span class="stock-label">Nuevo conteo físico</span>
             <span class="stock-value">{{ form.controls.cantidadFisica.value }}</span>
-            <span class="stock-unit">{{ p.unidadMedida }}</span>
+            <span class="stock-unit">{{ p.unidadBaseCodigo }}</span>
           </div>
 
           <div class="stock-diff">
@@ -88,6 +88,20 @@
             }
           </div>
         </div>
+      }
+
+      @if (unidadesRegistro().length > 1) {
+        <app-field
+          label="Contar en"
+          forId="unidadRegistro"
+          hint="Unidad base o presentación del producto"
+        >
+          <select id="unidadRegistro" formControlName="unidadRegistro">
+            @for (u of unidadesRegistro(); track u) {
+              <option [value]="u">{{ u }}</option>
+            }
+          </select>
+        </app-field>
       }
 
       <!-- Cantidad física real -->
@@ -107,6 +121,22 @@
           placeholder="0"
         />
       </app-field>
+
+      @if (permiteDecimal()) {
+        <app-field
+          label="Cantidad exacta (decimal)"
+          forId="cantidadFisicaExacta"
+          hint="Ej. 1.5 metros = 150 cm"
+        >
+          <input
+            id="cantidadFisicaExacta"
+            type="number"
+            min="0"
+            step="0.01"
+            formControlName="cantidadFisicaExacta"
+          />
+        </app-field>
+      }
 
       <!-- Justificación obligatoria -->
       <app-field

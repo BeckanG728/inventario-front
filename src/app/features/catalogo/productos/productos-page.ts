@@ -56,9 +56,10 @@ export class ProductosPage implements OnInit {
 
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly categoryControl = new FormControl(0, { nonNullable: true });
-  readonly unidadControl = new FormControl('', { nonNullable: true });
+  readonly unidadControl = new FormControl(0, { nonNullable: true });
   readonly estadoControl = new FormControl('', { nonNullable: true });
-  readonly unidades = ['UNIDAD', 'CAJA', 'GALON', 'JUEGO', 'KIT', 'KILOGRAMO', 'LITRO', 'METRO', 'PAR'];
+  /** Catálogo de unidades obtenido de GET /api/unidades (sin lista hardcodeada). */
+  readonly unidades = computed(() => this.catalogoLookup.unidades());
 
   readonly productos = signal<ProductoResponse[]>([]);
   readonly currentPage = signal<number>(0);
@@ -90,7 +91,7 @@ export class ProductosPage implements OnInit {
       const size = params['size'] !== undefined ? parseInt(params['size'], 10) : 10;
       const nombre = params['nombre'] || '';
       const categoria = params['categoria'] !== undefined ? parseInt(params['categoria'], 10) : 0;
-      const unidadMedida = params['unidadMedida'] || '';
+      const unidadBaseId = params['unidadBaseId'] !== undefined ? parseInt(params['unidadBaseId'], 10) : 0;
       const activo = params['activo'] === 'true' || params['activo'] === 'false' ? params['activo'] : '';
 
       this.currentPage.set(page);
@@ -101,8 +102,8 @@ export class ProductosPage implements OnInit {
       if (this.categoryControl.value !== categoria) {
         this.categoryControl.setValue(categoria, { emitEvent: false });
       }
-      if (this.unidadControl.value !== unidadMedida) {
-        this.unidadControl.setValue(unidadMedida, { emitEvent: false });
+      if (this.unidadControl.value !== unidadBaseId) {
+        this.unidadControl.setValue(unidadBaseId, { emitEvent: false });
       }
       if (this.estadoControl.value !== activo) {
         this.estadoControl.setValue(activo, { emitEvent: false });
@@ -128,7 +129,7 @@ export class ProductosPage implements OnInit {
 
     // Filtros por selección
     this.unidadControl.valueChanges.pipe(distinctUntilChanged()).subscribe(unidad => {
-      this.updateQueryParams({ unidadMedida: unidad || null, page: 0 });
+      this.updateQueryParams({ unidadBaseId: unidad > 0 ? unidad : null, page: 0 });
     });
     this.estadoControl.valueChanges.pipe(distinctUntilChanged()).subscribe(valor => {
       this.updateQueryParams({ activo: valor || null, page: 0 });
@@ -144,7 +145,7 @@ export class ProductosPage implements OnInit {
       size: this.pageSize(),
       nombre: this.searchControl.value.trim() || undefined,
       categoria: this.categoryControl.value > 0 ? this.categoryControl.value : undefined,
-      unidadMedida: this.unidadControl.value || undefined,
+      unidadBaseId: this.unidadControl.value > 0 ? this.unidadControl.value : undefined,
       activo: this.estadoControl.value === '' ? undefined : this.estadoControl.value === 'true'
     };
 
@@ -170,7 +171,7 @@ export class ProductosPage implements OnInit {
       queryParams: {
         nombre: null,
         categoria: null,
-        unidadMedida: null,
+        unidadBaseId: null,
         activo: null,
         page: 0
       },
