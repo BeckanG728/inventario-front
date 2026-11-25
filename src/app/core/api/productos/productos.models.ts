@@ -32,7 +32,6 @@ export interface StockMinimoRequest {
 export interface ProductoResponse {
   id: number;
   codigo: string;
-  sku: string;
   nombre: string;
   descripcion: string | null;
   unidadMedida: string;

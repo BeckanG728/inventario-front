@@ -81,8 +81,8 @@
       opacity: 0.65;
     }
 
-    /* SKU: completo y en una sola línea */
-    .cell-sku {
+    /* Código: completo y en una sola línea */
+    .cell-codigo {
       white-space: nowrap;
     }
 

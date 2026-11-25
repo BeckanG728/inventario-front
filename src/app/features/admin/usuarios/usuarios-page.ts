@@ -7,6 +7,7 @@ import { LucideKeyRound, LucidePencil } from '@lucide/angular';
 import { ListarUsuariosParams, UsuariosApi } from '@core/api/usuarios/usuarios-api';
 import { UsuarioResponse } from '@core/api/usuarios/usuarios.models';
 import { parseApiError } from '@core/api/api-error';
+import { RegisterResponse } from '@core/api/auth/auth.models';
 import { getRoleLabel, UserRole } from '@core/auth/roles';
 import { ToastService } from '@core/notifications/toast-service';
 import { DateTimePipe } from '@shared/format/date-time.pipe';
@@ -14,6 +15,7 @@ import { Badge, BadgeVariant } from '@shared/ui/badge/badge';
 import { Button } from '@shared/ui/button/button';
 import { PageHeader } from '@shared/ui/page-header/page-header';
 import { Pagination } from '@shared/ui/pagination/pagination';
+import { UsuarioCreateDialog } from './usuario-create-dialog';
 import { UsuarioEditDialog } from './usuario-edit-dialog';
 import { UsuarioPasswordDialog } from './usuario-password-dialog';
 
@@ -27,6 +29,7 @@ import { UsuarioPasswordDialog } from './usuario-password-dialog';
     Button,
     Badge,
     Pagination,
+    UsuarioCreateDialog,
     UsuarioEditDialog,
     UsuarioPasswordDialog,
     LucidePencil,
@@ -56,6 +59,7 @@ export class UsuariosPage implements OnInit {
   readonly loading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
 
+  readonly isCreateOpen = signal<boolean>(false);
   readonly isEditOpen = signal<boolean>(false);
   readonly isPasswordOpen = signal<boolean>(false);
   readonly selectedUsuario = signal<UsuarioResponse | null>(null);
@@ -133,8 +137,8 @@ export class UsuariosPage implements OnInit {
     this.updateQueryParams({ page });
   }
 
-  irANuevoUsuario(): void {
-    this.router.navigate(['/admin/usuarios/nuevo']);
+  openCreateDialog(): void {
+    this.isCreateOpen.set(true);
   }
 
   openEditDialog(usuario: UsuarioResponse): void {
@@ -145,6 +149,13 @@ export class UsuariosPage implements OnInit {
   openPasswordDialog(usuario: UsuarioResponse): void {
     this.selectedUsuario.set(usuario);
     this.isPasswordOpen.set(true);
+  }
+
+  onUsuarioCreado(resp: RegisterResponse): void {
+    this.toast.success(
+      `Usuario "${resp.username}" registrado correctamente como ${getRoleLabel(resp.role as UserRole)}.`
+    );
+    this.loadUsuarios();
   }
 
   onUsuarioActualizado(usuario: UsuarioResponse): void {

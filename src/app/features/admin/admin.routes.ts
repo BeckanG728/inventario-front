@@ -8,11 +8,6 @@ export const ADMIN_ROUTES: Routes = [
     pathMatch: 'full'
   },
   {
-    path: 'usuarios/nuevo',
-    title: 'Registrar usuario',
-    loadComponent: () => import('./usuario-form-page').then(m => m.UsuarioFormPage)
-  },
-  {
     path: 'usuarios',
     title: 'Usuarios',
     pathMatch: 'full',
