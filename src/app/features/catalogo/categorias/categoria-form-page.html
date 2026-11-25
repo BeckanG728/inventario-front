@@ -1,52 +1,17 @@
     <app-page-header
       title="Categorías de productos"
       subtitle="Registro de familias y clasificaciones de repuestos para el taller"
-    />
+    >
+      <app-button variant="primary" (btnClick)="openCreateDialog()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Nueva categoría
+      </app-button>
+    </app-page-header>
 
     <div class="category-layout">
-      <div class="data-panel form-card">
-        <div class="panel-head">
-          <h2>Registrar nueva categoría</h2>
-          <span class="panel-meta">Catálogo</span>
-        </div>
-
-        @if (generalError()) {
-          <div class="inline-alert inline-alert--error form-alert" role="alert">
-            <span>{{ generalError() }}</span>
-          </div>
-        }
-
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-          <app-field
-            label="Nombre de la categoría"
-            forId="nombre"
-            [required]="true"
-            hint="De 3 a 50 caracteres (ej. Frenos, Motor, Suspensión, Eléctrico)"
-            [error]="nombreError()"
-          >
-            <input
-              id="nombre"
-              type="text"
-              formControlName="nombre"
-              autocomplete="off"
-              placeholder="Ej. Sistema de Frenos"
-              [attr.aria-invalid]="!!nombreError()"
-            />
-          </app-field>
-
-          <div class="form-actions">
-            <app-button
-              type="submit"
-              variant="primary"
-              size="lg"
-              [loading]="submitting()"
-            >
-              Registrar categoría
-            </app-button>
-          </div>
-        </form>
-      </div>
-
       <!-- Listado paginado (viene del servidor) -->
       <div class="data-panel list-card">
         <div class="panel-head">
@@ -133,3 +98,8 @@
         />
       </div>
     </div>
+
+    <app-categoria-form-dialog
+      [(isOpen)]="isFormOpen"
+      (saved)="onCategoriaSaved()"
+    />

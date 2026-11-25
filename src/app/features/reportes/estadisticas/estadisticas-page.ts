@@ -18,11 +18,9 @@ import {
 import { parseApiError } from '@core/api/api-error';
 import { getLimaTodayString } from '@shared/format/date.util';
 import { PageHeader } from '@shared/ui/page-header/page-header';
-import { PillNav } from '@shared/ui/pill-nav/pill-nav';
 import { Button } from '@shared/ui/button/button';
 import { CurrencyPipe } from '@shared/format/currency.pipe';
 import { formatCurrency } from '@shared/format/number.util';
-import { REPORTES_NAV_ITEMS } from '../reportes-nav';
 
 type GranularidadUi = Granularidad | 'AUTO';
 type SerieKey = 'entrada' | 'salida';
@@ -158,7 +156,7 @@ function formatoMonto(n: number): string {
 @Component({
   selector: 'app-estadisticas-page',
   standalone: true,
-  imports: [FormsModule, PageHeader, PillNav, Button, CurrencyPipe],
+  imports: [FormsModule, PageHeader, Button, CurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './estadisticas-page.html',
   styleUrl: './estadisticas-page.css'
@@ -169,8 +167,6 @@ export class EstadisticasPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
-
-  readonly navItems = REPORTES_NAV_ITEMS;
 
   readonly from = signal('');
   readonly to = signal('');

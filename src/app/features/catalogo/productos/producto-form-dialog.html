@@ -107,36 +107,72 @@
             </app-field>
 
             <app-field
-              label="Unidad de medida"
-              forId="unidadMedida"
+              label="Unidad base"
+              forId="unidadBaseId"
               [required]="true"
-              hint="Ej. UNIDAD, JUEGO, LITRO, KIT (máx. 30 caracteres)"
-              [error]="unidadMedidaError()"
+              hint="Unidades válidas para la categoría elegida"
+              [error]="unidadBaseIdError()"
+            >
+              <select
+                id="unidadBaseId"
+                formControlName="unidadBaseId"
+                [attr.aria-invalid]="!!unidadBaseIdError()"
+              >
+                <option [value]="0" disabled>Selecciona una unidad...</option>
+                @for (u of unidadesBase(); track u.id) {
+                  <option [value]="u.id">{{ u.nombre }} ({{ u.codigo }})</option>
+                }
+              </select>
+            </app-field>
+          </div>
+
+          <div class="form-row">
+            <app-field
+              label="Presentación (opcional)"
+              forId="unidadPresentacionId"
+              [hint]="sinPresentaciones() ? 'Esta categoría no admite presentaciones' : 'Envase en que se adquiere el producto'"
+            >
+              <select id="unidadPresentacionId" formControlName="unidadPresentacionId">
+                <option [value]="0">Sin presentación</option>
+                @for (u of unidadesPresentacion(); track u.id) {
+                  <option [value]="u.id">{{ u.nombre }} ({{ u.codigo }})</option>
+                }
+              </select>
+            </app-field>
+
+            <app-field
+              label="Factor de presentación"
+              forId="factorPresentacion"
+              hint="Ej. 20 unidades por caja"
+              [error]="factorPresentacionError()"
             >
               <input
-                id="unidadMedida"
-                type="text"
-                formControlName="unidadMedida"
-                placeholder="Ej. UNIDAD"
-                [attr.aria-invalid]="!!unidadMedidaError()"
+                id="factorPresentacion"
+                type="number"
+                min="0"
+                step="1"
+                formControlName="factorPresentacion"
               />
             </app-field>
           </div>
         } @else {
           <app-field
-            label="Unidad de medida"
-            forId="unidadMedida"
+            label="Unidad base"
+            forId="unidadBaseId"
             [required]="true"
-            hint="Ej. UNIDAD, JUEGO, LITRO, KIT (máx. 30 caracteres)"
-            [error]="unidadMedidaError()"
+            hint="Unidades válidas para la categoría elegida"
+            [error]="unidadBaseIdError()"
           >
-            <input
-              id="unidadMedida"
-              type="text"
-              formControlName="unidadMedida"
-              placeholder="Ej. UNIDAD"
-              [attr.aria-invalid]="!!unidadMedidaError()"
-            />
+            <select
+              id="unidadBaseId"
+              formControlName="unidadBaseId"
+              [attr.aria-invalid]="!!unidadBaseIdError()"
+            >
+              <option [value]="0" disabled>Selecciona una unidad...</option>
+              @for (u of unidadesBase(); track u.id) {
+                <option [value]="u.id">{{ u.nombre }} ({{ u.codigo }})</option>
+              }
+            </select>
           </app-field>
         }
       </form>

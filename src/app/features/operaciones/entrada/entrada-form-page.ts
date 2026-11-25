@@ -7,6 +7,7 @@ import { ProductosApi } from '@core/api/productos/productos-api';
 import { ProductoResponse } from '@core/api/productos/productos.models';
 import { OperacionesApi } from '@core/api/operaciones/operaciones-api';
 import { EntradaRequest, EntradaResponse } from '@core/api/operaciones/operaciones.models';
+import { construirRegistroUnidad, unidadesDeRegistro } from '@core/api/operaciones/unidad-registro';
 import { CatalogoLookup } from '@core/lookup/catalogo-lookup';
 import { ToastService } from '@core/notifications/toast-service';
 import { parseApiError } from '@core/api/api-error';
@@ -62,13 +63,22 @@ export class EntradaFormPage implements OnInit {
     productoId: [0, [Validators.required, Validators.min(1)]],
     proveedorId: [0, [Validators.required, Validators.min(1)]],
     cantidad: [1, [Validators.required, Validators.min(1)]],
-    costoUnitario: [0, [Validators.required, Validators.min(0.01)]]
+    costoUnitario: [0, [Validators.required, Validators.min(0.01)]],
+    unidadRegistro: [''],
+    cantidadExacta: [0]
+  });
+
+  readonly unidadesRegistro = computed(() => unidadesDeRegistro(this.selectedProducto()));
+  readonly permiteDecimal = computed(() => {
+    const u = this.form.controls.unidadRegistro.value;
+    return u === 'METRO' || u === 'ROLLO';
   });
 
   readonly costoTotalCalculado = computed(() => {
     const raw = this.form.getRawValue();
-    if (raw.cantidad > 0 && raw.costoUnitario > 0) {
-      return raw.cantidad * raw.costoUnitario;
+    const cantidad = raw.cantidadExacta > 0 ? raw.cantidadExacta : raw.cantidad;
+    if (cantidad > 0 && raw.costoUnitario > 0) {
+      return cantidad * raw.costoUnitario;
     }
     return 0;
   });
@@ -137,6 +147,8 @@ export class EntradaFormPage implements OnInit {
     this.selectedProducto.set(prod);
     this.form.controls.productoId.setValue(prod.id);
     this.form.controls.proveedorId.setValue(prod.proveedorId ?? prod.idProveedor ?? 0);
+    this.form.controls.unidadRegistro.setValue(prod.unidadBaseCodigo || '');
+    this.form.controls.cantidadExacta.setValue(0);
 
     if (prod.costoUltimaCompra && prod.costoUltimaCompra > 0) {
       this.form.controls.costoUnitario.setValue(prod.costoUltimaCompra);
@@ -148,6 +160,8 @@ export class EntradaFormPage implements OnInit {
     this.selectedProducto.set(null);
     this.form.controls.productoId.setValue(0);
     this.form.controls.proveedorId.setValue(0);
+    this.form.controls.unidadRegistro.setValue('');
+    this.form.controls.cantidadExacta.setValue(0);
   }
 
   /** Desde el producto fijado: volver al selector libre quitando el query param. */
@@ -179,8 +193,13 @@ export class EntradaFormPage implements OnInit {
     const req: EntradaRequest = {
       productoId: Number(raw.productoId),
       proveedorId: Number(raw.proveedorId),
-      cantidad: Number(raw.cantidad),
-      costoUnitario: Number(raw.costoUnitario)
+      costoUnitario: Number(raw.costoUnitario),
+      ...construirRegistroUnidad(
+        this.selectedProducto(),
+        raw.unidadRegistro,
+        Number(raw.cantidad),
+        raw.cantidadExacta || null
+      )
     };
 
     this.operacionesApi.registrarEntrada(req).subscribe({
@@ -202,7 +221,9 @@ export class EntradaFormPage implements OnInit {
             productoId: 0,
             proveedorId: 0,
             cantidad: 1,
-            costoUnitario: 0
+            costoUnitario: 0,
+            unidadRegistro: '',
+            cantidadExacta: 0
           });
           this.selectedProducto.set(null);
         }

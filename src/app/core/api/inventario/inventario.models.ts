@@ -14,7 +14,6 @@ export interface ExistenciaConsultaResponse {
   codigo: string;
   nombre: string;
   descripcion: string | null;
-  unidadMedida: string;
   stockActual: number;
   stockMinimo: number;
   stockCritico: boolean;
@@ -26,6 +25,12 @@ export interface ExistenciaConsultaResponse {
   proveedorRazonSocial: string;
   estadoStock: EstadoStock;
   cantidadSugerida: number;
+  unidadBaseId: number;
+  unidadBaseCodigo: string;
+  unidadBaseNombre: string;
+  unidadPresentacionId?: number | null;
+  unidadPresentacionCodigo?: string | null;
+  factorPresentacion?: number | null;
 }
 
 /** Respuesta de `GET /api/monitoreo/alertas` — CATALOGO_ENDPOINTS §7.1. */

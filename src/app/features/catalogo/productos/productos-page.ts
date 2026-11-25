@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } 
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
-import { LucideBan, LucideEye, LucidePencil } from '@lucide/angular';
+import { LucideBan, LucideCheck, LucideEye, LucidePencil } from '@lucide/angular';
 import { ListarProductosParams, ProductosApi } from '@core/api/productos/productos-api';
 import { ProductoResponse } from '@core/api/productos/productos.models';
 import { CatalogoLookup } from '@core/lookup/catalogo-lookup';
@@ -38,7 +38,8 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
     StockMinimoDialog,
     LucideEye,
     LucidePencil,
-    LucideBan
+    LucideBan,
+    LucideCheck
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './productos-page.html',
@@ -56,9 +57,10 @@ export class ProductosPage implements OnInit {
 
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly categoryControl = new FormControl(0, { nonNullable: true });
-  readonly unidadControl = new FormControl('', { nonNullable: true });
+  readonly unidadControl = new FormControl(0, { nonNullable: true });
   readonly estadoControl = new FormControl('', { nonNullable: true });
-  readonly unidades = ['UNIDAD', 'CAJA', 'GALON', 'JUEGO', 'KIT', 'KILOGRAMO', 'LITRO', 'METRO', 'PAR'];
+  /** Catálogo de unidades obtenido de GET /api/unidades (sin lista hardcodeada). */
+  readonly unidades = computed(() => this.catalogoLookup.unidades());
 
   readonly productos = signal<ProductoResponse[]>([]);
   readonly currentPage = signal<number>(0);
@@ -75,9 +77,18 @@ export class ProductosPage implements OnInit {
   readonly isConfirmOpen = signal<boolean>(false);
   readonly selectedProducto = signal<ProductoResponse | null>(null);
   readonly actionSubmitting = signal<boolean>(false);
+  readonly confirmAccion = signal<'desactivar' | 'activar'>('desactivar');
+  readonly confirmTitle = computed(() =>
+    this.confirmAccion() === 'activar' ? 'Activar producto' : 'Desactivar producto');
+  readonly confirmText = computed(() =>
+    this.confirmAccion() === 'activar' ? 'Sí, activar' : 'Sí, desactivar');
+  readonly confirmVariant = computed(() =>
+    this.confirmAccion() === 'activar' ? 'primary' as const : 'destructive' as const);
   readonly confirmMessage = computed(() => {
     const p = this.selectedProducto();
-    return p ? `¿Estás seguro de que deseas desactivar el repuesto "${p.codigo} — ${p.nombre}"?` : '';
+    if (!p) return '';
+    const verbo = this.confirmAccion() === 'activar' ? 'activar' : 'desactivar';
+    return `¿Estás seguro de que deseas ${verbo} el repuesto "${p.codigo} — ${p.nombre}"?`;
   });
 
   ngOnInit(): void {
@@ -90,7 +101,7 @@ export class ProductosPage implements OnInit {
       const size = params['size'] !== undefined ? parseInt(params['size'], 10) : 10;
       const nombre = params['nombre'] || '';
       const categoria = params['categoria'] !== undefined ? parseInt(params['categoria'], 10) : 0;
-      const unidadMedida = params['unidadMedida'] || '';
+      const unidadBaseId = params['unidadBaseId'] !== undefined ? parseInt(params['unidadBaseId'], 10) : 0;
       const activo = params['activo'] === 'true' || params['activo'] === 'false' ? params['activo'] : '';
 
       this.currentPage.set(page);
@@ -101,8 +112,8 @@ export class ProductosPage implements OnInit {
       if (this.categoryControl.value !== categoria) {
         this.categoryControl.setValue(categoria, { emitEvent: false });
       }
-      if (this.unidadControl.value !== unidadMedida) {
-        this.unidadControl.setValue(unidadMedida, { emitEvent: false });
+      if (this.unidadControl.value !== unidadBaseId) {
+        this.unidadControl.setValue(unidadBaseId, { emitEvent: false });
       }
       if (this.estadoControl.value !== activo) {
         this.estadoControl.setValue(activo, { emitEvent: false });
@@ -128,7 +139,7 @@ export class ProductosPage implements OnInit {
 
     // Filtros por selección
     this.unidadControl.valueChanges.pipe(distinctUntilChanged()).subscribe(unidad => {
-      this.updateQueryParams({ unidadMedida: unidad || null, page: 0 });
+      this.updateQueryParams({ unidadBaseId: unidad > 0 ? unidad : null, page: 0 });
     });
     this.estadoControl.valueChanges.pipe(distinctUntilChanged()).subscribe(valor => {
       this.updateQueryParams({ activo: valor || null, page: 0 });
@@ -144,7 +155,7 @@ export class ProductosPage implements OnInit {
       size: this.pageSize(),
       nombre: this.searchControl.value.trim() || undefined,
       categoria: this.categoryControl.value > 0 ? this.categoryControl.value : undefined,
-      unidadMedida: this.unidadControl.value || undefined,
+      unidadBaseId: this.unidadControl.value > 0 ? this.unidadControl.value : undefined,
       activo: this.estadoControl.value === '' ? undefined : this.estadoControl.value === 'true'
     };
 
@@ -170,7 +181,7 @@ export class ProductosPage implements OnInit {
       queryParams: {
         nombre: null,
         categoria: null,
-        unidadMedida: null,
+        unidadBaseId: null,
         activo: null,
         page: 0
       },
@@ -213,7 +224,42 @@ export class ProductosPage implements OnInit {
 
   confirmDesactivar(p: ProductoResponse): void {
     this.selectedProducto.set(p);
+    this.confirmAccion.set('desactivar');
     this.isConfirmOpen.set(true);
+  }
+
+  confirmActivar(p: ProductoResponse): void {
+    this.selectedProducto.set(p);
+    this.confirmAccion.set('activar');
+    this.isConfirmOpen.set(true);
+  }
+
+  executeConfirmacion(): void {
+    if (this.confirmAccion() === 'activar') {
+      this.executeActivar();
+    } else {
+      this.executeDesactivar();
+    }
+  }
+
+  executeActivar(): void {
+    const prod = this.selectedProducto();
+    if (!prod) return;
+
+    this.actionSubmitting.set(true);
+    this.productosApi.activar(prod.id).subscribe({
+      next: (updated) => {
+        this.actionSubmitting.set(false);
+        this.isConfirmOpen.set(false);
+        this.toast.success(`Producto "${updated.codigo}" activado correctamente.`);
+        this.reemplazarEnLista(updated);
+      },
+      error: (err) => {
+        this.actionSubmitting.set(false);
+        const apiErr = parseApiError(err);
+        this.toast.error(apiErr.message || 'Error al activar el producto.');
+      }
+    });
   }
 
   executeDesactivar(): void {
@@ -226,7 +272,7 @@ export class ProductosPage implements OnInit {
         this.actionSubmitting.set(false);
         this.isConfirmOpen.set(false);
         this.toast.success(`Producto "${updated.codigo}" desactivado correctamente.`);
-        this.onProductoSaved(updated);
+        this.reemplazarEnLista(updated);
       },
       error: (err) => {
         this.actionSubmitting.set(false);
@@ -237,6 +283,11 @@ export class ProductosPage implements OnInit {
   }
 
   onProductoSaved(savedProd: ProductoResponse): void {
+    this.reemplazarEnLista(savedProd);
+    this.toast.success(`Producto "${savedProd.codigo}" guardado correctamente.`);
+  }
+
+  private reemplazarEnLista(savedProd: ProductoResponse): void {
     this.productos.update(list => {
       const idx = list.findIndex(p => p.id === savedProd.id);
       if (idx >= 0) {
@@ -246,6 +297,5 @@ export class ProductosPage implements OnInit {
       }
       return [savedProd, ...list];
     });
-    this.toast.success(`Producto "${savedProd.codigo}" guardado correctamente.`);
   }
 }

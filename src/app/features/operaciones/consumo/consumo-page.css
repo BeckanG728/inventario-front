@@ -85,3 +85,17 @@
   .cart-actions .action-buttons { width: 100%; }
   .cart-actions .action-buttons app-button { flex: 1; min-width: 0; }
 }
+
+/* Selector de unidad de registro y cantidad exacta (longitud). */
+.unit-select,
+.exact-input {
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-color, var(--color-border, #cbd5e1));
+  border-radius: var(--radius-sm, 4px);
+  background: var(--surface-color, #fff);
+  color: inherit;
+  font: inherit;
+}
+
+.exact-input { max-width: 90px; }

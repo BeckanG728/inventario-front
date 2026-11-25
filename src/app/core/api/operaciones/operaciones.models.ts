@@ -7,7 +7,6 @@ export interface ProductoFrecuente {
   productoId: number;
   codigo: string;
   nombre: string;
-  unidadMedida: string;
   stockActual: number;
   stockMinimo: number;
   stockCritico: boolean;
@@ -15,6 +14,9 @@ export interface ProductoFrecuente {
   categoriaNombre: string;
   vecesConsumido: number;
   unidadesConsumidas: number;
+  unidadBaseCodigo?: string | null;
+  unidadPresentacionCodigo?: string | null;
+  factorPresentacion?: number | null;
 }
 
 export type TipoMovimiento = 'ENTRADA' | 'CONSUMO' | 'AJUSTE';
@@ -34,13 +36,21 @@ export interface MovimientoResponse {
   productoId: number;
   consumoId: number | null;
   usuarioId: number;
+  /** Snapshot de la unidad introducida por el usuario (V9). */
+  unidadRegistro?: string | null;
+  factorAplicado?: number | null;
+  cantidadBase?: number | null;
 }
 
 export interface EntradaRequest {
   productoId: number;
   proveedorId: number;
-  cantidad: number;
+  cantidad?: number;
   costoUnitario: number;
+  unidadRegistro?: string;
+  factorAplicado?: number;
+  /** Decimal solo para longitud (se convierte a CM en el backend). */
+  cantidadExacta?: number;
 }
 
 export interface EntradaResponse {
@@ -50,13 +60,19 @@ export interface EntradaResponse {
 
 export interface AjusteRequest {
   productoId: number;
-  cantidadFisica: number;
+  cantidadFisica?: number;
+  cantidadFisicaExacta?: number;
   justificacion: string;
+  unidadRegistro?: string;
+  factorAplicado?: number;
 }
 
 export interface ConsumoItemRequest {
   productoId: number;
-  cantidad: number;
+  cantidad?: number;
+  unidadRegistro?: string;
+  factorAplicado?: number;
+  cantidadExacta?: number;
 }
 
 export interface ConsumoRequest {

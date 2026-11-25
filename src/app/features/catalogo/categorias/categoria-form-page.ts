@@ -1,18 +1,16 @@
 // src/app/features/catalogo/categorias/categoria-form-page.ts
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { FormControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { CatalogoApi } from '@core/api/catalogo/catalogo-api';
 import { CategoriaResponse } from '@core/api/catalogo/catalogo.models';
 import { CatalogoLookup } from '@core/lookup/catalogo-lookup';
-import { ToastService } from '@core/notifications/toast-service';
 import { parseApiError } from '@core/api/api-error';
-import { getFirstErrorMessage } from '@shared/forms/error-messages';
 import { PageHeader } from '@shared/ui/page-header/page-header';
-import { Field } from '@shared/ui/field/field';
 import { Button } from '@shared/ui/button/button';
 import { Badge } from '@shared/ui/badge/badge';
 import { Pagination } from '@shared/ui/pagination/pagination';
+import { CategoriaFormDialog } from './categoria-form-dialog';
 
 @Component({
   selector: 'app-categoria-form-page',
@@ -20,34 +18,28 @@ import { Pagination } from '@shared/ui/pagination/pagination';
   imports: [
     ReactiveFormsModule,
     PageHeader,
-    Field,
     Button,
     Badge,
-    Pagination
+    Pagination,
+    CategoriaFormDialog
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './categoria-form-page.html',
   styleUrl: './categoria-form-page.css'
 })
 export class CategoriaFormPage implements OnInit {
-  private readonly fb = inject(NonNullableFormBuilder);
   private readonly catalogoApi = inject(CatalogoApi);
   readonly catalogoLookup = inject(CatalogoLookup);
-  private readonly toast = inject(ToastService);
 
-  // --- Formulario de alta ---
-  readonly submitting = signal<boolean>(false);
-  readonly generalError = signal<string | null>(null);
+  // --- Modal de alta ---
+  readonly isFormOpen = signal<boolean>(false);
 
-  readonly form = this.fb.group({
-    nombre: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50), Validators.pattern(/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ_ -]{3,50}$/)]]
-  });
+  openCreateDialog(): void {
+    this.isFormOpen.set(true);
+  }
 
-  get nombreError(): () => string | null {
-    return () => {
-      const ctrl = this.form.controls.nombre;
-      return ctrl.touched ? getFirstErrorMessage(ctrl.errors) : null;
-    };
+  onCategoriaSaved(): void {
+    this.cargar();
   }
 
   // --- Listado paginado ---
@@ -64,6 +56,7 @@ export class CategoriaFormPage implements OnInit {
   readonly listError = signal<string | null>(null);
 
   ngOnInit(): void {
+    this.catalogoLookup.cargarFiltros().subscribe();
     this.cargar();
 
     // Búsqueda por nombre con retardo de 300 ms; al cambiar un filtro se vuelve a la primera página.
@@ -112,38 +105,5 @@ export class CategoriaFormPage implements OnInit {
   onPageChange(nuevaPagina: number): void {
     this.currentPage.set(nuevaPagina);
     this.cargar();
-  }
-
-  onSubmit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
-    this.submitting.set(true);
-    this.generalError.set(null);
-
-    const { nombre } = this.form.getRawValue();
-
-    this.catalogoApi.crearCategoria({ nombre: nombre.trim() }).subscribe({
-      next: (resp) => {
-        this.submitting.set(false);
-        this.catalogoLookup.registrarCategoria(resp);
-        this.toast.success(`Categoría "${resp.nombre}" registrada correctamente.`);
-        this.form.reset({ nombre: '' });
-        this.cargar();
-      },
-      error: (err) => {
-        this.submitting.set(false);
-        const apiErr = parseApiError(err);
-
-        if (apiErr.status === 409) {
-          this.form.controls.nombre.setErrors({ server: 'Ya existe una categoría registrada con ese nombre.' });
-          return;
-        }
-
-        this.generalError.set(apiErr.message || 'Error al registrar la categoría.');
-      }
-    });
   }
 }

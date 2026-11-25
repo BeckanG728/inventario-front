@@ -25,9 +25,15 @@
               <dd>{{ p.categoriaNombre || '—' }}</dd>
             </div>
             <div class="detail-item">
-              <dt>Unidad de medida</dt>
-              <dd>{{ p.unidadMedida }}</dd>
+              <dt>Unidad base</dt>
+              <dd>{{ p.unidadBaseNombre }} ({{ p.unidadBaseCodigo }})</dd>
             </div>
+            @if (p.unidadPresentacionCodigo) {
+              <div class="detail-item">
+                <dt>Presentación</dt>
+                <dd>1 {{ p.unidadPresentacionCodigo }} = {{ p.factorPresentacion || '—' }} {{ p.unidadBaseCodigo }}</dd>
+              </div>
+            }
           </dl>
         </section>
 

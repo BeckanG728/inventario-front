@@ -15,12 +15,10 @@ import { parseApiError } from '@core/api/api-error';
 import { ToastService } from '@core/notifications/toast-service';
 import { downloadHttpResponse } from '@shared/download/download.util';
 import { PageHeader } from '@shared/ui/page-header/page-header';
-import { PillNav } from '@shared/ui/pill-nav/pill-nav';
 import { Button } from '@shared/ui/button/button';
 import { CurrencyPipe } from '@shared/format/currency.pipe';
 import { NumberPipe } from '@shared/format/number.pipe';
 import { Pagination } from '@shared/ui/pagination/pagination';
-import { REPORTES_NAV_ITEMS } from '../reportes-nav';
 import { BotonesExportar } from './botones-exportar';
 
 @Component({
@@ -28,7 +26,6 @@ import { BotonesExportar } from './botones-exportar';
   standalone: true,
   imports: [
     PageHeader,
-    PillNav,
     Button,
     CurrencyPipe,
     NumberPipe,
@@ -42,8 +39,6 @@ import { BotonesExportar } from './botones-exportar';
 export class ValorInventarioPage implements OnInit {
   private readonly reportesApi = inject(ReportesApi);
   private readonly toast = inject(ToastService);
-
-  readonly navItems = REPORTES_NAV_ITEMS;
 
   readonly data = signal<ValorInventarioResponse | null>(null);
   readonly page = signal(0);

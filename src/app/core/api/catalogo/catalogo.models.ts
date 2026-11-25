@@ -10,6 +10,7 @@ export interface CategoriaResponse {
   nombre: string;
   descripcion?: string | null;
   activo?: boolean;
+  unidades?: { id: number; codigo: string; nombre: string; permiteFragmentacion: boolean }[];
 }
 
 export interface ProveedorRequest {

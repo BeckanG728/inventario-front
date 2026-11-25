@@ -42,11 +42,11 @@
         <select
           class="category-select"
           [formControl]="unidadControl"
-          aria-label="Filtrar por unidad de medida"
+          aria-label="Filtrar por unidad base"
         >
-          <option value="">Todas las unidades</option>
-          @for (u of unidades; track u) {
-            <option [value]="u">{{ u }}</option>
+          <option [value]="0">Todas las unidades</option>
+          @for (u of unidades(); track u.id) {
+            <option [value]="u.id">{{ u.nombre }} ({{ u.codigo }})</option>
           }
         </select>
 
@@ -217,16 +217,27 @@
                         <svg lucidePencil [size]="17" aria-hidden="true"></svg>
                       </button>
 
-                      <button
-                        type="button"
-                        class="row-btn row-btn--danger"
-                        [title]="p.activo ? 'Desactivar producto' : 'El producto ya está inactivo'"
-                        [attr.aria-label]="'Desactivar ' + p.nombre"
-                        [disabled]="!p.activo"
-                        (click)="confirmDesactivar(p)"
-                      >
-                        <svg lucideBan [size]="17" aria-hidden="true"></svg>
-                      </button>
+                      @if (p.activo) {
+                        <button
+                          type="button"
+                          class="row-btn row-btn--danger"
+                          title="Desactivar producto"
+                          [attr.aria-label]="'Desactivar ' + p.nombre"
+                          (click)="confirmDesactivar(p)"
+                        >
+                          <svg lucideBan [size]="17" aria-hidden="true"></svg>
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="row-btn"
+                          title="Activar producto"
+                          [attr.aria-label]="'Activar ' + p.nombre"
+                          (click)="confirmActivar(p)"
+                        >
+                          <svg lucideCheck [size]="17" aria-hidden="true"></svg>
+                        </button>
+                      }
                     }
                   </div>
                 </td>
@@ -269,10 +280,10 @@
 
     <app-confirm-dialog
       [(isOpen)]="isConfirmOpen"
-      title="Desactivar producto"
+      [title]="confirmTitle()"
       [message]="confirmMessage()"
-      confirmText="Sí, desactivar"
-      confirmVariant="destructive"
+      [confirmText]="confirmText()"
+      [confirmVariant]="confirmVariant()"
       [submitting]="actionSubmitting()"
-      (confirmed)="executeDesactivar()"
+      (confirmed)="executeConfirmacion()"
     />
