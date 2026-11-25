@@ -81,4 +81,8 @@ export class ProductosApi {
   desactivar(id: number): Observable<ProductoResponse> {
     return this.http.patch<ProductoResponse>(`${this.baseUrl}/productos/${id}/desactivar`, {});
   }
+
+  activar(id: number): Observable<ProductoResponse> {
+    return this.http.patch<ProductoResponse>(`${this.baseUrl}/productos/${id}/activar`, {});
+  }
 }

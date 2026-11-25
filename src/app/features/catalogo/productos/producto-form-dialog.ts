@@ -1,6 +1,8 @@
 // src/app/features/catalogo/productos/producto-form-dialog.ts
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, model, output, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { startWith, switchMap, tap } from 'rxjs';
 import { ProductosApi } from '@core/api/productos/productos-api';
 import { CreateProductoRequest, ProductoResponse, UpdateProductoRequest } from '@core/api/productos/productos.models';
 import { CatalogoLookup } from '@core/lookup/catalogo-lookup';
@@ -47,6 +49,18 @@ export class ProductoFormDialog {
   readonly unidadSeleccionada = computed(() =>
     this.unidadesDisponibles().find(u => u.id === this.form.controls.unidadBaseId.value));
 
+  /** Las unidades fragmentables (CAJA, PAQUETE, JUEGO...) son presentaciones: no pueden ser unidad base (RN502). */
+  readonly unidadesBase = computed(() => this.unidadesDisponibles().filter(u => !u.permiteFragmentacion));
+  readonly unidadesPresentacion = computed(() => this.unidadesDisponibles().filter(u => u.permiteFragmentacion));
+  readonly sinPresentaciones = computed(() =>
+    this.unidadesDisponibles().length > 0 && this.unidadesPresentacion().length === 0);
+
+  /** Unidad base que corresponde a cada presentación de longitud. */
+  private static readonly BASE_POR_PRESENTACION: Record<string, string> = {
+    METRO: 'CM',
+    ROLLO: 'CM'
+  };
+
   constructor() {
     effect(() => {
       const prod = this.productoToEdit();
@@ -77,21 +91,36 @@ export class ProductoFormDialog {
     });
 
     // El combobox de unidades solo ofrece las válidas para la categoría elegida.
-    effect(() => {
-      const categoriaId = this.form.controls.idCategoria.value;
-      this.unidadesDisponibles.set([]);
-      this.catalogoLookup.cargarUnidadesPorCategoria(categoriaId).subscribe(unidades => {
-        this.unidadesDisponibles.set(unidades);
-        const idUnidad = this.form.controls.unidadBaseId.value;
-        if (idUnidad > 0 && !unidades.some(u => u.id === idUnidad)) {
+    // Se usa valueChanges porque idCategoria.value no es una señal: un effect no se re-ejecutaría al cambiar de categoría.
+    this.form.controls.idCategoria.valueChanges.pipe(
+      startWith(this.form.controls.idCategoria.value),
+      tap(() => {
+        this.unidadesDisponibles.set([]);
+        if (!this.isEdit()) {
           this.form.patchValue({
             unidadBaseId: 0,
             unidadPresentacionId: 0,
             factorPresentacion: 0
           });
         }
-      });
+      }),
+      switchMap(categoriaId => this.catalogoLookup.cargarUnidadesPorCategoria(Number(categoriaId))),
+      takeUntilDestroyed()
+    ).subscribe(unidades => {
+      this.unidadesDisponibles.set(unidades);
+      const idUnidad = Number(this.form.controls.unidadBaseId.value);
+      if (idUnidad > 0 && !unidades.some(u => u.id === idUnidad)) {
+        this.form.patchValue({
+          unidadBaseId: 0,
+          unidadPresentacionId: 0,
+          factorPresentacion: 0
+        });
+      }
+      this.actualizarEstadoPresentacion(unidades);
     });
+
+    this.form.controls.unidadPresentacionId.valueChanges.pipe(takeUntilDestroyed())
+      .subscribe(id => this.aplicarReglasPresentacion(Number(id)));
   }
 
   get nombreError(): () => string | null {
@@ -137,6 +166,73 @@ export class ProductoFormDialog {
       }
       return ctrl.touched ? getFirstErrorMessage(ctrl.errors) : null;
     };
+  }
+
+  get factorPresentacionError(): () => string | null {
+    return () => {
+      const ctrl = this.form.controls.factorPresentacion;
+      if (!ctrl.touched) return null;
+      if (ctrl.hasError('required') || ctrl.hasError('min')) {
+        return 'Indica el factor de presentación (mayor a 0).';
+      }
+      return getFirstErrorMessage(ctrl.errors);
+    };
+  }
+
+  /** Si la categoría no tiene presentaciones, se deshabilitan presentación y factor (solo al crear). */
+  private actualizarEstadoPresentacion(unidades: UnidadResponse[]): void {
+    const sinPresentaciones = !this.isEdit()
+      && unidades.length > 0
+      && !unidades.some(u => u.permiteFragmentacion);
+    const controles = [this.form.controls.unidadPresentacionId];
+    for (const ctrl of controles) {
+      if (sinPresentaciones) {
+        ctrl.disable({ emitEvent: false });
+      } else {
+        ctrl.enable({ emitEvent: false });
+      }
+    }
+    this.sincronizarFactor();
+  }
+
+  /** El factor solo se habilita cuando hay una presentación elegida; sin presentación queda en 0 y deshabilitado. */
+  private sincronizarFactor(): void {
+    const factor = this.form.controls.factorPresentacion;
+    if (this.isEdit()) {
+      factor.enable({ emitEvent: false });
+      return;
+    }
+    const presentacion = this.form.controls.unidadPresentacionId;
+    if (presentacion.enabled && Number(presentacion.value) > 0) {
+      factor.enable({ emitEvent: false });
+    } else {
+      factor.setValue(0, { emitEvent: false });
+      factor.disable({ emitEvent: false });
+    }
+  }
+
+  /** Factor obligatorio solo si hay presentación; la unidad base queda fijada según la presentación (solo al crear). */
+  private aplicarReglasPresentacion(presentacionId: number): void {
+    const base = this.form.controls.unidadBaseId;
+    const factor = this.form.controls.factorPresentacion;
+
+    if (this.isEdit() || presentacionId <= 0) {
+      factor.clearValidators();
+      base.enable({ emitEvent: false });
+    } else {
+      factor.setValidators([Validators.required, Validators.min(1)]);
+      const presentacion = this.unidadesDisponibles().find(u => u.id === presentacionId);
+      const codigoBase = presentacion ? ProductoFormDialog.BASE_POR_PRESENTACION[presentacion.codigo] : undefined;
+      const unidadBase = codigoBase ? this.unidadesDisponibles().find(u => u.codigo === codigoBase) : undefined;
+      if (unidadBase) {
+        base.setValue(unidadBase.id);
+        base.disable({ emitEvent: false });
+      } else {
+        base.enable({ emitEvent: false });
+      }
+    }
+    factor.updateValueAndValidity({ emitEvent: false });
+    this.sincronizarFactor();
   }
 
   onCancel(): void {

@@ -17,13 +17,11 @@ import {
 import { parseApiError } from '@core/api/api-error';
 import { getLimaMonthRange } from '@shared/format/date.util';
 import { PageHeader } from '@shared/ui/page-header/page-header';
-import { PillNav } from '@shared/ui/pill-nav/pill-nav';
 import { Button } from '@shared/ui/button/button';
 import { Badge } from '@shared/ui/badge/badge';
 import { Pagination } from '@shared/ui/pagination/pagination';
 import { DateTimePipe } from '@shared/format/date-time.pipe';
 import { CurrencyPipe } from '@shared/format/currency.pipe';
-import { REPORTES_NAV_ITEMS } from '../../reportes/reportes-nav';
 
 @Component({
   selector: 'app-reporte-movimientos-page',
@@ -31,7 +29,6 @@ import { REPORTES_NAV_ITEMS } from '../../reportes/reportes-nav';
   imports: [
     FormsModule,
     PageHeader,
-    PillNav,
     Button,
     Badge,
     Pagination,
@@ -47,8 +44,6 @@ export class ReporteMovimientosPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
-
-  readonly navItems = REPORTES_NAV_ITEMS;
 
   // Estado de filtros
   readonly desde = signal('');

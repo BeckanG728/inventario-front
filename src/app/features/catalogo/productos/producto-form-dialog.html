@@ -118,8 +118,8 @@
                 formControlName="unidadBaseId"
                 [attr.aria-invalid]="!!unidadBaseIdError()"
               >
-                <option [value]="''" disabled>Selecciona una unidad...</option>
-                @for (u of unidadesDisponibles(); track u.id) {
+                <option [value]="0" disabled>Selecciona una unidad...</option>
+                @for (u of unidadesBase(); track u.id) {
                   <option [value]="u.id">{{ u.nombre }} ({{ u.codigo }})</option>
                 }
               </select>
@@ -130,14 +130,12 @@
             <app-field
               label="Presentación (opcional)"
               forId="unidadPresentacionId"
-              hint="Envase en que se adquiere el producto"
+              [hint]="sinPresentaciones() ? 'Esta categoría no admite presentaciones' : 'Envase en que se adquiere el producto'"
             >
               <select id="unidadPresentacionId" formControlName="unidadPresentacionId">
                 <option [value]="0">Sin presentación</option>
-                @for (u of unidadesDisponibles(); track u.id) {
-                  @if (u.permiteFragmentacion) {
-                    <option [value]="u.id">{{ u.nombre }} ({{ u.codigo }})</option>
-                  }
+                @for (u of unidadesPresentacion(); track u.id) {
+                  <option [value]="u.id">{{ u.nombre }} ({{ u.codigo }})</option>
                 }
               </select>
             </app-field>
@@ -146,6 +144,7 @@
               label="Factor de presentación"
               forId="factorPresentacion"
               hint="Ej. 20 unidades por caja"
+              [error]="factorPresentacionError()"
             >
               <input
                 id="factorPresentacion"
@@ -169,8 +168,8 @@
               formControlName="unidadBaseId"
               [attr.aria-invalid]="!!unidadBaseIdError()"
             >
-              <option [value]="''" disabled>Selecciona una unidad...</option>
-              @for (u of unidadesDisponibles(); track u.id) {
+              <option [value]="0" disabled>Selecciona una unidad...</option>
+              @for (u of unidadesBase(); track u.id) {
                 <option [value]="u.id">{{ u.nombre }} ({{ u.codigo }})</option>
               }
             </select>

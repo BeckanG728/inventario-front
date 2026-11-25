@@ -1,0 +1,50 @@
+    <app-modal
+      title="Registrar nueva categoría"
+      size="md"
+      [(isOpen)]="isOpen"
+      (closed)="onCancel()"
+    >
+      @if (generalError()) {
+        <div class="inline-alert inline-alert--error form-alert" role="alert">
+          <span>{{ generalError() }}</span>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" id="categoriaForm" novalidate>
+        <app-field
+          label="Nombre de la categoría"
+          forId="nombre"
+          [required]="true"
+          hint="De 3 a 50 caracteres (ej. Frenos, Motor, Suspensión, Eléctrico)"
+          [error]="nombreError()"
+        >
+          <input
+            id="nombre"
+            type="text"
+            formControlName="nombre"
+            autocomplete="off"
+            placeholder="Ej. Sistema de Frenos"
+            [attr.aria-invalid]="!!nombreError()"
+          />
+        </app-field>
+      </form>
+
+      <div modal-footer class="dialog-actions">
+        <app-button
+          variant="secondary"
+          [disabled]="submitting()"
+          (btnClick)="onCancel()"
+        >
+          Cancelar
+        </app-button>
+
+        <app-button
+          type="submit"
+          variant="primary"
+          [loading]="submitting()"
+          (btnClick)="onSubmit()"
+        >
+          Registrar categoría
+        </app-button>
+      </div>
+    </app-modal>

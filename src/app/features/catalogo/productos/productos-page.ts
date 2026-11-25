@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } 
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
-import { LucideBan, LucideEye, LucidePencil } from '@lucide/angular';
+import { LucideBan, LucideCheck, LucideEye, LucidePencil } from '@lucide/angular';
 import { ListarProductosParams, ProductosApi } from '@core/api/productos/productos-api';
 import { ProductoResponse } from '@core/api/productos/productos.models';
 import { CatalogoLookup } from '@core/lookup/catalogo-lookup';
@@ -38,7 +38,8 @@ import { StockMinimoDialog } from './stock-minimo-dialog';
     StockMinimoDialog,
     LucideEye,
     LucidePencil,
-    LucideBan
+    LucideBan,
+    LucideCheck
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './productos-page.html',
@@ -76,9 +77,18 @@ export class ProductosPage implements OnInit {
   readonly isConfirmOpen = signal<boolean>(false);
   readonly selectedProducto = signal<ProductoResponse | null>(null);
   readonly actionSubmitting = signal<boolean>(false);
+  readonly confirmAccion = signal<'desactivar' | 'activar'>('desactivar');
+  readonly confirmTitle = computed(() =>
+    this.confirmAccion() === 'activar' ? 'Activar producto' : 'Desactivar producto');
+  readonly confirmText = computed(() =>
+    this.confirmAccion() === 'activar' ? 'Sí, activar' : 'Sí, desactivar');
+  readonly confirmVariant = computed(() =>
+    this.confirmAccion() === 'activar' ? 'primary' as const : 'destructive' as const);
   readonly confirmMessage = computed(() => {
     const p = this.selectedProducto();
-    return p ? `¿Estás seguro de que deseas desactivar el repuesto "${p.codigo} — ${p.nombre}"?` : '';
+    if (!p) return '';
+    const verbo = this.confirmAccion() === 'activar' ? 'activar' : 'desactivar';
+    return `¿Estás seguro de que deseas ${verbo} el repuesto "${p.codigo} — ${p.nombre}"?`;
   });
 
   ngOnInit(): void {
@@ -214,7 +224,42 @@ export class ProductosPage implements OnInit {
 
   confirmDesactivar(p: ProductoResponse): void {
     this.selectedProducto.set(p);
+    this.confirmAccion.set('desactivar');
     this.isConfirmOpen.set(true);
+  }
+
+  confirmActivar(p: ProductoResponse): void {
+    this.selectedProducto.set(p);
+    this.confirmAccion.set('activar');
+    this.isConfirmOpen.set(true);
+  }
+
+  executeConfirmacion(): void {
+    if (this.confirmAccion() === 'activar') {
+      this.executeActivar();
+    } else {
+      this.executeDesactivar();
+    }
+  }
+
+  executeActivar(): void {
+    const prod = this.selectedProducto();
+    if (!prod) return;
+
+    this.actionSubmitting.set(true);
+    this.productosApi.activar(prod.id).subscribe({
+      next: (updated) => {
+        this.actionSubmitting.set(false);
+        this.isConfirmOpen.set(false);
+        this.toast.success(`Producto "${updated.codigo}" activado correctamente.`);
+        this.reemplazarEnLista(updated);
+      },
+      error: (err) => {
+        this.actionSubmitting.set(false);
+        const apiErr = parseApiError(err);
+        this.toast.error(apiErr.message || 'Error al activar el producto.');
+      }
+    });
   }
 
   executeDesactivar(): void {
@@ -227,7 +272,7 @@ export class ProductosPage implements OnInit {
         this.actionSubmitting.set(false);
         this.isConfirmOpen.set(false);
         this.toast.success(`Producto "${updated.codigo}" desactivado correctamente.`);
-        this.onProductoSaved(updated);
+        this.reemplazarEnLista(updated);
       },
       error: (err) => {
         this.actionSubmitting.set(false);
@@ -238,6 +283,11 @@ export class ProductosPage implements OnInit {
   }
 
   onProductoSaved(savedProd: ProductoResponse): void {
+    this.reemplazarEnLista(savedProd);
+    this.toast.success(`Producto "${savedProd.codigo}" guardado correctamente.`);
+  }
+
+  private reemplazarEnLista(savedProd: ProductoResponse): void {
     this.productos.update(list => {
       const idx = list.findIndex(p => p.id === savedProd.id);
       if (idx >= 0) {
@@ -247,6 +297,5 @@ export class ProductosPage implements OnInit {
       }
       return [savedProd, ...list];
     });
-    this.toast.success(`Producto "${savedProd.codigo}" guardado correctamente.`);
   }
 }

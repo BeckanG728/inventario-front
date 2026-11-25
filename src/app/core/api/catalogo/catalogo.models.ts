@@ -3,7 +3,6 @@
 export interface CategoriaRequest {
   nombre: string;
   descripcion?: string;
-  unidadIds?: number[];
 }
 
 export interface CategoriaResponse {
