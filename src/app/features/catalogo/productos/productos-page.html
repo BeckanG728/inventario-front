@@ -86,7 +86,7 @@
       <table class="productos-table">
         <thead>
           <tr>
-            <th>Código SKU</th>
+            <th>Código</th>
             <th>Producto</th>
             <th>Categoría</th>
             <th class="text-right">Stock</th>
@@ -139,7 +139,7 @@
           } @else {
             @for (p of productos(); track p.id) {
               <tr class="product-row" [class.row-inactive]="!p.activo">
-                <td class="cell-sku font-mono">
+                <td class="cell-codigo font-mono">
                   <strong>{{ p.codigo }}</strong>
                 </td>
 

@@ -12,7 +12,6 @@ export type EstadoStock = 'SIN_STOCK' | 'BAJO' | 'NORMAL';
 export interface ExistenciaConsultaResponse {
   id: number;
   codigo: string;
-  sku: string;
   nombre: string;
   descripcion: string | null;
   unidadMedida: string;

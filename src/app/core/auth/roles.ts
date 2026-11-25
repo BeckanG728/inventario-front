@@ -20,7 +20,6 @@ export const ROUTE_ROLES: Record<string, UserRole[]> = {
   '/reportes/valor-inventario': ['JEFE_TALLER'],
   '/reportes/estadisticas': ['JEFE_TALLER'],
   '/admin/usuarios': ['ADMIN'],
-  '/admin/usuarios/nuevo': ['ADMIN'],
   '/admin/auditoria': ['ADMIN']
 };
 

@@ -1,28 +1,29 @@
-// src/app/features/admin/usuario-form-page.ts
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+// src/app/features/admin/usuarios/usuario-create-dialog.ts
+import { ChangeDetectionStrategy, Component, inject, model, output, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthApi } from '@core/api/auth/auth-api';
-import { ToastService } from '@core/notifications/toast-service';
+import { RegisterResponse } from '@core/api/auth/auth.models';
 import { parseApiError } from '@core/api/api-error';
-import { getRoleLabel } from '@core/auth/roles';
 import { valUsr01Username, valUsr02Password, valUsr03Role } from '@shared/forms/validators';
 import { getFirstErrorMessage } from '@shared/forms/error-messages';
-import { PageHeader } from '@shared/ui/page-header/page-header';
+import { Modal } from '@shared/ui/modal/modal';
 import { Field } from '@shared/ui/field/field';
 import { Button } from '@shared/ui/button/button';
 
 @Component({
-  selector: 'app-usuario-form-page',
+  selector: 'app-usuario-create-dialog',
   standalone: true,
-  imports: [ReactiveFormsModule, PageHeader, Field, Button],
+  imports: [ReactiveFormsModule, Modal, Field, Button],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './usuario-form-page.html',
-  styleUrl: './usuario-form-page.css'
+  templateUrl: './usuario-create-dialog.html',
+  styleUrl: './usuario-create-dialog.css'
 })
-export class UsuarioFormPage {
+export class UsuarioCreateDialog {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly authApi = inject(AuthApi);
-  private readonly toast = inject(ToastService);
+
+  readonly isOpen = model<boolean>(false);
+  readonly created = output<RegisterResponse>();
 
   readonly submitting = signal<boolean>(false);
   readonly generalError = signal<string | null>(null);
@@ -59,6 +60,11 @@ export class UsuarioFormPage {
     this.showPassword.update(v => !v);
   }
 
+  onCancel(): void {
+    this.isOpen.set(false);
+    this.resetForm();
+  }
+
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -69,7 +75,6 @@ export class UsuarioFormPage {
     this.generalError.set(null);
 
     const raw = this.form.getRawValue();
-
     this.authApi.register({
       username: raw.username.trim(),
       password: raw.password,
@@ -77,19 +82,14 @@ export class UsuarioFormPage {
     }).subscribe({
       next: (resp) => {
         this.submitting.set(false);
-        const roleText = getRoleLabel(raw.role);
-        this.toast.success(`Usuario "${resp.username}" registrado correctamente como ${roleText}.`);
-        this.form.reset({
-          username: '',
-          password: '',
-          role: 'MECANICO'
-        });
+        this.created.emit(resp);
+        this.isOpen.set(false);
+        this.resetForm();
       },
       error: (err) => {
         this.submitting.set(false);
         const apiError = parseApiError(err);
 
-        // Conflicto de usuario existente (409)
         if (apiError.status === 409 || apiError.code === 'USER_ALREADY_EXISTS') {
           this.form.controls.username.setErrors({
             server: 'Ya existe un usuario registrado con ese nombre de usuario.'
@@ -97,7 +97,6 @@ export class UsuarioFormPage {
           return;
         }
 
-        // Errores de validación de campo desde el backend
         if (apiError.status === 400 && apiError.details.length > 0) {
           for (const d of apiError.details) {
             if (d.field === 'username') {
@@ -114,5 +113,13 @@ export class UsuarioFormPage {
         this.generalError.set(apiError.message || 'No se pudo completar el registro del usuario.');
       }
     });
+  }
+
+  private resetForm(): void {
+    this.form.reset({ username: '', password: '', role: 'MECANICO' });
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    this.generalError.set(null);
+    this.showPassword.set(false);
   }
 }
