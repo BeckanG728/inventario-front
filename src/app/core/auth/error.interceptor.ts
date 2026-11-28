@@ -28,7 +28,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         }
         // 403 Forbidden: acción o pantalla no autorizada
         else if (err.status === 403) {
-          if (req.method === 'GET') {
+          const apiError = parseApiError(err);
+          if (apiError.code === 'CAMBIO_PASSWORD_PENDIENTE') {
+            router.navigate(['/cambiar-password']);
+          } else if (req.method === 'GET') {
             router.navigate(['/acceso-denegado']);
           } else {
             toast.error('No tienes permisos suficientes para realizar esta acción.');

@@ -10,6 +10,7 @@ interface PersistedSession {
   role: UserRole;
   username: string;
   expiresAt: number;
+  cambioPasswordPendiente: boolean;
 }
 
 function decodeJwtClaim(token: string, claimKey: string): string | null {
@@ -40,12 +41,14 @@ export class SessionStore {
   private readonly _role = signal<UserRole | null>(null);
   private readonly _username = signal<string | null>(null);
   private readonly _expiresAt = signal<number | null>(null);
+  private readonly _cambioPasswordPendiente = signal(false);
 
   readonly token = this._token.asReadonly();
   readonly userId = this._userId.asReadonly();
   readonly role = this._role.asReadonly();
   readonly username = this._username.asReadonly();
   readonly expiresAt = this._expiresAt.asReadonly();
+  readonly cambioPasswordPendiente = this._cambioPasswordPendiente.asReadonly();
 
   readonly isAuthenticated = computed(() => {
     const t = this._token();
@@ -68,7 +71,8 @@ export class SessionStore {
       userId: response.userId,
       role: response.role,
       username: decodedUsername,
-      expiresAt
+      expiresAt,
+      cambioPasswordPendiente: response.cambioPasswordPendiente ?? false
     };
 
     this._token.set(data.token);
@@ -76,6 +80,7 @@ export class SessionStore {
     this._role.set(data.role);
     this._username.set(data.username);
     this._expiresAt.set(data.expiresAt);
+    this._cambioPasswordPendiente.set(data.cambioPasswordPendiente);
 
     try {
       sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
@@ -84,12 +89,18 @@ export class SessionStore {
     }
   }
 
+  /** Reemplaza la sesión con el token devuelto tras el cambio obligatorio. */
+  confirmarCambioPassword(response: LoginResponse): void {
+    this.setSession(response);
+  }
+
   clear(): void {
     this._token.set(null);
     this._userId.set(null);
     this._role.set(null);
     this._username.set(null);
     this._expiresAt.set(null);
+    this._cambioPasswordPendiente.set(false);
 
     try {
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
@@ -115,6 +126,7 @@ export class SessionStore {
       this._role.set(data.role);
       this._username.set(data.username);
       this._expiresAt.set(data.expiresAt);
+      this._cambioPasswordPendiente.set(data.cambioPasswordPendiente ?? false);
     } catch {
       this.clear();
     }

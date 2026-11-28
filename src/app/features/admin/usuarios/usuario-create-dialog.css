@@ -24,3 +24,25 @@
 .toggle-visibility:hover {
   color: var(--color-text-primary);
 }
+
+.check-field {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.check-field input {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.check-field small {
+  display: block;
+  color: var(--color-text-secondary);
+}

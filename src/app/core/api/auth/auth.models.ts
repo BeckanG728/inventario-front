@@ -13,12 +13,19 @@ export interface LoginResponse {
   expiresIn: number; // en segundos
   userId: number;
   role: UserRole;
+  cambioPasswordPendiente: boolean;
+}
+
+export interface CambiarPasswordRequest {
+  passwordActual: string;
+  nuevaPassword: string;
 }
 
 export interface RegisterRequest {
   username: string;
   password: string;
   role: 'JEFE_TALLER' | 'MECANICO';
+  cambioPasswordPendiente: boolean;
 }
 
 export interface RegisterResponse {
