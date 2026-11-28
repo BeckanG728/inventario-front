@@ -38,13 +38,14 @@ export class UsuarioPasswordDialog {
 
   readonly form = this.fb.group({
     password: ['', [Validators.required, valUsr02Password()]],
-    confirmacion: ['', [Validators.required]]
+    confirmacion: ['', [Validators.required]],
+    cambioPasswordPendiente: [true]
   }, { validators: passwordsMatch });
 
   constructor() {
     effect(() => {
       this.usuario();
-      this.form.reset({ password: '', confirmacion: '' });
+      this.form.reset({ password: '', confirmacion: '', cambioPasswordPendiente: true });
       this.generalError.set(null);
     });
   }
@@ -88,7 +89,10 @@ export class UsuarioPasswordDialog {
     this.generalError.set(null);
 
     const { password } = this.form.getRawValue();
-    this.usuariosApi.resetPassword(usuario.id, { password }).subscribe({
+    this.usuariosApi.resetPassword(usuario.id, {
+      password,
+      cambioPasswordPendiente: this.form.getRawValue().cambioPasswordPendiente
+    }).subscribe({
       next: resp => {
         this.submitting.set(false);
         this.saved.emit(resp);

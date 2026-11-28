@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { authGuard } from '@core/auth/auth.guard';
 import { guestGuard } from '@core/auth/guest.guard';
+import { passwordChangeGuard } from '@core/auth/password-change.guard';
 import { roleGuard } from '@core/auth/role.guard';
 import { SessionStore } from '@core/auth/session-store';
 import { getRoleHome } from '@core/auth/roles';
@@ -22,7 +23,21 @@ export const routes: Routes = [
     ]
   },
 
-  // 2. Rutas autenticadas con MainLayout
+  // 2. Cambio obligatorio de contraseña (sesión iniciada, sin acceso al resto)
+  {
+    path: 'cambiar-password',
+    canActivate: [passwordChangeGuard],
+    loadComponent: () => import('@layout/auth-layout/auth-layout').then(m => m.AuthLayout),
+    children: [
+      {
+        path: '',
+        title: 'Cambiar contraseña',
+        loadComponent: () => import('@features/auth/cambiar-password-page').then(m => m.CambiarPasswordPage)
+      }
+    ]
+  },
+
+  // 3. Rutas autenticadas con MainLayout
   {
     path: '',
     canActivate: [authGuard],

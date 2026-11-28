@@ -32,7 +32,8 @@ export class UsuarioCreateDialog {
   readonly form = this.fb.group({
     username: ['', [Validators.required, valUsr01Username()]],
     password: ['', [Validators.required, valUsr02Password()]],
-    role: ['MECANICO' as 'JEFE_TALLER' | 'MECANICO', [Validators.required, valUsr03Role()]]
+    role: ['MECANICO' as 'JEFE_TALLER' | 'MECANICO', [Validators.required, valUsr03Role()]],
+    cambioPasswordPendiente: [true]
   });
 
   get usernameError(): () => string | null {
@@ -78,7 +79,8 @@ export class UsuarioCreateDialog {
     this.authApi.register({
       username: raw.username.trim(),
       password: raw.password,
-      role: raw.role
+      role: raw.role,
+      cambioPasswordPendiente: raw.cambioPasswordPendiente
     }).subscribe({
       next: (resp) => {
         this.submitting.set(false);
@@ -116,7 +118,7 @@ export class UsuarioCreateDialog {
   }
 
   private resetForm(): void {
-    this.form.reset({ username: '', password: '', role: 'MECANICO' });
+    this.form.reset({ username: '', password: '', role: 'MECANICO', cambioPasswordPendiente: true });
     this.form.markAsPristine();
     this.form.markAsUntouched();
     this.generalError.set(null);

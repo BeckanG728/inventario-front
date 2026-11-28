@@ -80,6 +80,13 @@ export class LoginPage {
         const returnUrl = this.route.snapshot.queryParams['returnUrl'];
         const safeUrl = this.sanitizeReturnUrl(returnUrl);
 
+        if (response.cambioPasswordPendiente) {
+          this.router.navigate(['/cambiar-password'], {
+            queryParams: safeUrl ? { returnUrl: safeUrl } : {}
+          });
+          return;
+        }
+
         if (safeUrl) {
           this.router.navigateByUrl(safeUrl);
         } else {

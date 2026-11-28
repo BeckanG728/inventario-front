@@ -47,3 +47,6 @@ docs/
 
 # Planning / seguimiento local del agente
 /task/
+AGENTS.md
+CLAUDE.md
+.claude/*

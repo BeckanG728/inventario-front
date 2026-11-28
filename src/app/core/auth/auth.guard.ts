@@ -8,6 +8,11 @@ export const authGuard: CanActivateFn = (_route, state) => {
   const router = inject(Router);
 
   if (session.isAuthenticated()) {
+    if (session.cambioPasswordPendiente()) {
+      return router.createUrlTree(['/cambiar-password'], {
+        queryParams: { returnUrl: state.url }
+      });
+    }
     return true;
   }
 

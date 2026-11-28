@@ -16,4 +16,5 @@ export interface ActualizarUsuarioRequest {
 
 export interface ResetPasswordRequest {
   password: string;
+  cambioPasswordPendiente: boolean;
 }

@@ -45,7 +45,7 @@ describe('UsuariosApi', () => {
 
   it('usa PUT para actualizar rol y estado, y PATCH para restablecer la contraseña', () => {
     api.actualizar(7, { role: 'MECANICO', activo: false }).subscribe();
-    api.resetPassword(7, { password: 'Clave1234' }).subscribe();
+    api.resetPassword(7, { password: 'Clave1234', cambioPasswordPendiente: true }).subscribe();
 
     const update = requests.expectOne('/api/usuarios/7');
     expect(update.request.method).toBe('PUT');

@@ -80,6 +80,17 @@ describe('errorInterceptor', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it('redirige al cambio de contraseña sin toast cuando el backend lo exige', () => {
+    http.get('/api/productos').subscribe({ error: () => {} });
+    requests.expectOne('/api/productos').flush(
+      { error: 'CAMBIO_PASSWORD_PENDIENTE', message: 'Debe cambiar su contraseña antes de continuar' },
+      { status: 403, statusText: 'Forbidden' }
+    );
+
+    expect(navigate).toHaveBeenCalledWith(['/cambiar-password']);
+    expect(error).not.toHaveBeenCalled();
+  });
+
   it('no duplica el aviso del límite en el formulario de login', () => {
     http.post('/api/auth/login', {}).subscribe({ error: () => {} });
     requests.expectOne('/api/auth/login').flush(

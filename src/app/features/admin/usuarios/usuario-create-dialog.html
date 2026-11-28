@@ -84,6 +84,18 @@
         <option value="JEFE_TALLER">Jefe de Taller (Administra catálogo, entradas y reportes)</option>
       </select>
     </app-field>
+
+    <label class="check-field" for="create-cambio-password">
+      <input
+        id="create-cambio-password"
+        type="checkbox"
+        formControlName="cambioPasswordPendiente"
+      />
+      <span>
+        Exigir cambio de contraseña en el primer acceso
+        <small>Si se desmarca, la contraseña inicial se considera definitiva.</small>
+      </span>
+    </label>
   </form>
 
   <div modal-footer class="dialog-actions">
